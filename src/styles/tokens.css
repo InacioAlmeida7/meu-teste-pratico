@@ -1,0 +1,92 @@
+/**
+ * Design Tokens — Identidade Institucional Banestes (WCAG 2.2 AA).
+ *
+ * Todos os pares texto/superfície atendem contraste mínimo >= 4.5:1 (AA).
+ * Tons verdes mais claros (--color-accent-green-graphic / --color-accent-green-bright)
+ * são reservados estritamente a elementos gráficos (ex.: barras de crédito).
+ */
+:root {
+  /* Marca e Ação */
+  --color-brand-primary: #0814dd;
+  --color-brand-primary-hover: #1e0ae8;
+  --color-brand-secondary: #0070ba;
+  --color-accent-green-text: #3b7a22;
+  --color-accent-green-graphic: #428726;
+  --color-accent-green-bright: #56af31;
+
+  /* Superfícies */
+  --color-bg-page: #fafafa;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #eef4fc;
+  --color-bg-table-head: #f6f9fd;
+  --color-header-backdrop: rgba(255, 255, 255, 0.88);
+
+  /* Bordas */
+  --color-border-subtle: #d2e2f2;
+  --color-border-divider: #d7dfea;
+  --color-border-neutral: #dee2e6;
+
+  /* Texto */
+  --color-text-primary: #111827;
+  --color-text-strong: #000000;
+  --color-text-secondary: #596270;
+  --color-text-on-brand: #ffffff;
+
+  /* Estados Semânticos */
+  --color-success-text: #3b7a22;
+  --color-success-bg: #eff8eb;
+  --color-success-border: #c5e2b8;
+
+  --color-error-text: #b42318;
+  --color-error-bg: #fef3f2;
+  --color-error-border: #fecdca;
+
+  --color-warning-text: #9a3412;
+  --color-warning-bg: #fff7ed;
+  --color-warning-border: #fed7aa;
+
+  /* Tipografia */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* Escala de Espaçamento */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Layout, Raios e Elevação */
+  --container-max: 75rem;
+  --header-height: 4.5rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-header: 0 2px 12px rgba(17, 24, 39, 0.06);
+
+  /* Movimento e Camadas */
+  --transition-fast: 150ms ease;
+  --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --z-sticky: 10;
+  --z-header: 100;
+}
