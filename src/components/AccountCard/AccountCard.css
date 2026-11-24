@@ -1,0 +1,147 @@
+.account-card {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.account-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-block-end: var(--space-3);
+  border-bottom: 1px solid var(--color-border-divider);
+}
+
+.account-card__type {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.01em;
+}
+
+.account-card__type--corrente {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-brand-primary);
+}
+
+.account-card__type--poupanca {
+  background-color: var(--color-success-bg);
+  color: var(--color-accent-green-text);
+}
+
+.account-card__id {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.account-card__balance {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.account-card__balance-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.account-card__balance-value {
+  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+}
+
+.account-card__balance-value--positive {
+  color: var(--color-accent-green-text);
+}
+
+.account-card__balance-value--negative {
+  color: var(--color-error-text);
+}
+
+.account-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-top: 1px solid var(--color-border-divider);
+  border-bottom: 1px solid var(--color-border-divider);
+}
+
+.account-card__metric {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.account-card__metric-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.account-card__metric-value {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.account-card__credit-bar-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.account-card__credit-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.account-card__credit-bar-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.account-card__credit-bar-percent {
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.account-card__progress-track {
+  block-size: 0.5rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-subtle);
+  overflow: hidden;
+}
+
+/* Barra estritamente gráfica: utiliza #428726 (--color-accent-green-graphic) */
+.account-card__progress-fill {
+  block-size: 100%;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-green-graphic);
+  transition: width var(--transition-base);
+}
+
+.account-card__progress-fill--low {
+  background-color: var(--color-warning-text);
+}
+
+.account-card__no-limit {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}

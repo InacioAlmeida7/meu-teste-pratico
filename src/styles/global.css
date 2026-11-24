@@ -189,28 +189,6 @@ svg {
   }
 }
 
-/* Placeholder temporário de detalhes (substituído na Fase 1C) */
-.detail-placeholder {
-  display: grid;
-  gap: var(--space-4);
-  justify-items: start;
-  padding: var(--space-6);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  background-color: var(--color-bg-surface);
-}
-
-.detail-placeholder__title {
-  color: var(--color-text-strong);
-  font-size: var(--text-xl);
-  font-weight: var(--font-bold);
-}
-
-.detail-placeholder__text {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-}
-
 /* Respeito estrito à preferência de redução de movimento */
 @media (prefers-reduced-motion: reduce) {
   *,
