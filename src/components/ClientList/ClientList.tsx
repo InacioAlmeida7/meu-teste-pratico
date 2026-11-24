@@ -1,7 +1,8 @@
-import { ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Agencia, Cliente } from "../../types/models";
 import { formatCpfCnpj } from "../../utils/formatters";
+import { onlyDigits } from "../../utils/normalizers";
 import "./ClientList.css";
 
 interface ClientListProps {
@@ -11,8 +12,8 @@ interface ClientListProps {
 
 /**
  * Listagem responsiva de clientes com tabela semântica única:
- * no desktop (>= 768px) exibe tabela tabular; no mobile (< 768px) transforma
- * as linhas em cards empilhados com rótulos injetados via variáveis CSS.
+ * no desktop (>= 768px) exibe tabela tabular com destaque visual de tipo PF/PJ e hover fluido;
+ * no mobile (< 768px) transforma as linhas em cards empilhados com rótulos CSS.
  */
 export function ClientList({ clientes, agenciaMap }: ClientListProps) {
   return (
@@ -40,29 +41,60 @@ export function ClientList({ clientes, agenciaMap }: ClientListProps) {
         <tbody>
           {clientes.map((cliente) => {
             const agencia = agenciaMap.get(cliente.codigoAgencia);
+            const digits = onlyDigits(cliente.cpfCnpj);
+            const isPessoaJuridica = digits.length === 14;
 
             return (
               <tr key={cliente.id} className="client-list__row">
                 <th scope="row" className="client-list__name-cell">
-                  <span className="client-list__name">{cliente.nome}</span>
-                  {cliente.nomeSocial ? (
-                    <span className="client-list__social-name">
-                      Nome social: {cliente.nomeSocial}
-                    </span>
-                  ) : null}
+                  <div className="client-list__name-wrap">
+                    <span className="client-list__name">{cliente.nome}</span>
+                    {cliente.nomeSocial ? (
+                      <span className="client-list__social-name">
+                        Nome social: {cliente.nomeSocial}
+                      </span>
+                    ) : null}
+                  </div>
                 </th>
 
                 <td className="client-list__doc-cell tabular-nums">
-                  {formatCpfCnpj(cliente.cpfCnpj)}
+                  <div className="client-list__doc-wrap">
+                    <span
+                      className={
+                        isPessoaJuridica
+                          ? "client-list__person-tag client-list__person-tag--pj"
+                          : "client-list__person-tag client-list__person-tag--pf"
+                      }
+                    >
+                      {isPessoaJuridica ? "PJ" : "PF"}
+                    </span>
+                    <span>{formatCpfCnpj(cliente.cpfCnpj)}</span>
+                  </div>
                 </td>
 
-                <td className="client-list__email-cell">{cliente.email}</td>
+                <td className="client-list__email-cell">
+                  <span className="client-list__inline-meta">
+                    <Mail
+                      size={14}
+                      className="client-list__meta-icon"
+                      aria-hidden="true"
+                    />
+                    <span>{cliente.email}</span>
+                  </span>
+                </td>
 
                 <td className="client-list__agency-cell">
                   {agencia ? (
-                    <span>
-                      <span className="tabular-nums">{agencia.codigo}</span> ·{" "}
-                      {agencia.nome}
+                    <span className="client-list__inline-meta">
+                      <Building2
+                        size={14}
+                        className="client-list__meta-icon"
+                        aria-hidden="true"
+                      />
+                      <span>
+                        <span className="tabular-nums">{agencia.codigo}</span> ·{" "}
+                        {agencia.nome}
+                      </span>
                     </span>
                   ) : (
                     <span>

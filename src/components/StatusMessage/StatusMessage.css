@@ -18,14 +18,22 @@
 .status-skeleton__cell,
 .status-skeleton__head {
   border-radius: var(--radius-sm);
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-table-head) 25%,
-    var(--color-bg-subtle) 50%,
-    var(--color-bg-table-head) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  background-color: var(--color-bg-table-head);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .status-skeleton__bar,
+  .status-skeleton__cell,
+  .status-skeleton__head {
+    background: linear-gradient(
+      90deg,
+      var(--color-bg-table-head) 25%,
+      var(--color-bg-subtle) 50%,
+      var(--color-bg-table-head) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
 }
 
 .status-skeleton__bar {

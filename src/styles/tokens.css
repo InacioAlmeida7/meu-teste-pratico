@@ -3,14 +3,24 @@
  *
  * Todos os pares texto/superfície atendem contraste mínimo >= 4.5:1 (AA).
  * Tons verdes mais claros (--color-accent-green-graphic / --color-accent-green-bright)
- * são reservados estritamente a elementos gráficos (ex.: barras de crédito).
+ * são reservados estritamente a elementos gráficos (ícones e barras de crédito).
+ * Botões verdes com texto branco utilizam --color-btn-green (#337A21, 5.29:1).
  */
 :root {
   /* Marca e Ação */
   --color-brand-primary: #0814dd;
+  --color-brand-primary-dark: #0610b8;
   --color-brand-primary-hover: #1e0ae8;
   --color-brand-secondary: #0070ba;
-  --color-accent-green-text: #3b7a22;
+  --color-brand-hero-gradient: linear-gradient(
+    135deg,
+    #0610b8 0%,
+    #0814dd 58%,
+    #0a22c4 100%
+  );
+  --color-btn-green: #00AB16;
+  --color-btn-green-hover: #286319;
+  --color-accent-green-text: #56AF31;
   --color-accent-green-graphic: #428726;
   --color-accent-green-bright: #56af31;
 
@@ -19,7 +29,12 @@
   --color-bg-surface: #ffffff;
   --color-bg-subtle: #eef4fc;
   --color-bg-table-head: #f6f9fd;
-  --color-header-backdrop: rgba(255, 255, 255, 0.88);
+  --color-footer-top-bg: #e6eef8;
+  --color-header-backdrop: rgba(255, 255, 255, 0.92);
+  --color-hero-text: #ffffff;
+  --color-hero-muted: rgba(255, 255, 255, 0.88);
+  --color-hero-surface: rgba(255, 255, 255, 0.12);
+  --color-hero-border: rgba(255, 255, 255, 0.24);
 
   /* Bordas */
   --color-border-subtle: #d2e2f2;
@@ -75,18 +90,20 @@
 
   /* Layout, Raios e Elevação */
   --container-max: 75rem;
-  --header-height: 4.5rem;
+  --header-height: 4.75rem;
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-full: 9999px;
 
   --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.04);
-  --shadow-header: 0 2px 12px rgba(17, 24, 39, 0.06);
+  --shadow-card: 0 2px 8px rgba(17, 24, 39, 0.05);
+  --shadow-card-hover: 0 6px 18px rgba(8, 20, 221, 0.08);
+  --shadow-header: 0 2px 12px rgba(17, 24, 39, 0.07);
 
   /* Movimento e Camadas */
   --transition-fast: 150ms ease;
-  --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 260ms cubic-bezier(0.4, 0, 0.2, 1);
   --z-sticky: 10;
   --z-header: 100;
 }

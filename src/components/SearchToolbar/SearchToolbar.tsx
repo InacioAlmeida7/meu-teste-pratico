@@ -1,5 +1,10 @@
-import { Plus, Search, X } from "lucide-react";
+import { useMemo } from "react";
+import { Building2, Search, X } from "lucide-react";
 import type { Agencia } from "../../types/models";
+import {
+  SelectDropdown,
+  type SelectOption,
+} from "../SelectDropdown/SelectDropdown";
 import "./SearchToolbar.css";
 
 interface SearchToolbarProps {
@@ -10,12 +15,11 @@ interface SearchToolbarProps {
   agencias: Agencia[];
   hasActiveFilters: boolean;
   onClearFilters: () => void;
-  onNewClient: () => void;
 }
 
 /**
- * Barra de consulta e filtro por agência com labels explícitos e botão de ação principal.
- * Mantém controles compactos e acessíveis em desktop e mobile.
+ * Barra de consulta e filtro por agência com labels explícitos e dropdown customizado.
+ * O botão principal "Novo Cliente" fica centralizado no Header institucional.
  */
 export function SearchToolbar({
   searchQuery,
@@ -25,9 +29,18 @@ export function SearchToolbar({
   agencias,
   hasActiveFilters,
   onClearFilters,
-  onNewClient,
 }: SearchToolbarProps) {
-  const sortedAgencias = [...agencias].sort((a, b) => a.codigo - b.codigo);
+  const agencyOptions = useMemo<SelectOption[]>(() => {
+    const sorted = [...agencias].sort((a, b) => a.codigo - b.codigo);
+    return [
+      { value: "", label: "Todas as agências" },
+      ...sorted.map((agencia) => ({
+        value: String(agencia.codigo),
+        code: String(agencia.codigo),
+        label: agencia.nome,
+      })),
+    ];
+  }, [agencias]);
 
   return (
     <div className="search-toolbar">
@@ -67,24 +80,20 @@ export function SearchToolbar({
           <label htmlFor="agency-filter" className="search-toolbar__label">
             Agência
           </label>
-          <select
+          <SelectDropdown
             id="agency-filter"
-            className="search-toolbar__select"
             value={selectedAgencia}
-            onChange={(event) => onAgenciaChange(event.target.value)}
-          >
-            <option value="">Todas as agências</option>
-            {sortedAgencias.map((agencia) => (
-              <option key={agencia.id} value={String(agencia.codigo)}>
-                {agencia.codigo} — {agencia.nome}
-              </option>
-            ))}
-          </select>
+            onChange={onAgenciaChange}
+            options={agencyOptions}
+            placeholder="Todas as agências"
+            leadingIcon={<Building2 size={17} />}
+            listboxLabel="Filtrar por agência"
+          />
         </div>
       </div>
 
-      <div className="search-toolbar__actions">
-        {hasActiveFilters ? (
+      {hasActiveFilters ? (
+        <div className="search-toolbar__actions">
           <button
             type="button"
             className="btn btn-ghost"
@@ -92,16 +101,8 @@ export function SearchToolbar({
           >
             Limpar filtros
           </button>
-        ) : null}
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={onNewClient}
-        >
-          <Plus size={18} aria-hidden="true" />
-          <span>Novo Cliente</span>
-        </button>
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

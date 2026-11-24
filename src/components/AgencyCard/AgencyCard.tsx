@@ -1,4 +1,4 @@
-import { AlertTriangle, Building2 } from "lucide-react";
+import { AlertTriangle, Building2, Hash, MapPin } from "lucide-react";
 import type { Agencia } from "../../types/models";
 import "./AgencyCard.css";
 
@@ -8,8 +8,8 @@ interface AgencyCardProps {
 }
 
 /**
- * Exibe os dados da agência vinculada ao cliente ou um aviso resiliente
- * caso o código da agência não exista na planilha de agências.
+ * Exibe os dados da agência vinculada ao cliente com ícones institucionais em verde
+ * ou um aviso resiliente caso o código não exista na planilha de agências.
  */
 export function AgencyCard({ codigoAgencia, agencia }: AgencyCardProps) {
   if (!agencia) {
@@ -52,15 +52,24 @@ export function AgencyCard({ codigoAgencia, agencia }: AgencyCardProps) {
 
       <dl className="agency-card__details">
         <div className="agency-card__item">
-          <dt className="agency-card__term">Código</dt>
+          <dt className="agency-card__term">
+            <Hash size={13} className="agency-card__term-icon" aria-hidden="true" />
+            <span>Código</span>
+          </dt>
           <dd className="agency-card__desc tabular-nums">{agencia.codigo}</dd>
         </div>
         <div className="agency-card__item">
-          <dt className="agency-card__term">ID da Agência</dt>
+          <dt className="agency-card__term">
+            <Hash size={13} className="agency-card__term-icon" aria-hidden="true" />
+            <span>ID da Agência</span>
+          </dt>
           <dd className="agency-card__desc tabular-nums">{agencia.id}</dd>
         </div>
         <div className="agency-card__item agency-card__item--full">
-          <dt className="agency-card__term">Endereço</dt>
+          <dt className="agency-card__term">
+            <MapPin size={13} className="agency-card__term-icon" aria-hidden="true" />
+            <span>Endereço</span>
+          </dt>
           <dd className="agency-card__desc">{agencia.endereco}</dd>
         </div>
       </dl>

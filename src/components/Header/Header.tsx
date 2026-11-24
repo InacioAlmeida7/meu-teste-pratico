@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { UserPlus } from "lucide-react";
+import { Link } from "react-router-dom";
+import logoBanestesBlue from "../../assets/logo-original-blue.png";
 import "./Header.css";
 
+interface HeaderProps {
+  onNewClient: () => void;
+}
+
 /**
- * Cabeçalho institucional sticky com fundo translúcido (referência RI Banestes),
- * skip-link acessível no início da árvore de foco e navegação principal.
+ * Cabeçalho institucional sticky no padrão Banestes:
+ * marca oficial à esquerda, identificação discreta do portal e botão verde
+ * de ação principal ("Novo Cliente") alinhado à direita.
  */
-export function Header() {
-  const { pathname } = useLocation();
+export function Header({ onNewClient }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -22,8 +28,6 @@ export function Header() {
     };
   }, []);
 
-  const isClientsRoute = pathname === "/" || pathname.startsWith("/clientes");
-
   return (
     <header
       className={isScrolled ? "site-header site-header--scrolled" : "site-header"}
@@ -33,36 +37,34 @@ export function Header() {
       </a>
 
       <div className="container site-header__inner">
-        <Link to="/" className="site-header__brand">
-          <svg
-            className="site-header__mark"
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-            aria-hidden="true"
-          >
-            <rect width="32" height="32" rx="6" fill="#0814dd" />
-            <path d="M8 9h9a5 5 0 0 1 0 10H8V9Z" fill="#ffffff" />
-            <path d="M8 15h10a4 4 0 0 1 0 8H8v-8Z" fill="#ffffff" />
-            <path d="M4 16l6 6V16H4Z" fill="#428726" />
-          </svg>
-          <span className="site-header__brand-text">
-            <span className="site-header__brand-title">Gestão Bancária</span>
-            <span className="site-header__brand-subtitle">
-              Portal de Clientes
-            </span>
-          </span>
+        <Link to="/" className="site-header__brand" aria-label="Banestes — Página inicial">
+          <img
+            src={logoBanestesBlue}
+            alt="Banestes — Juntos para o futuro"
+            className="site-header__logo"
+            height="38"
+          />
         </Link>
 
-        <nav className="site-header__nav" aria-label="Principal">
-          <Link
-            to="/"
-            className="site-header__nav-link"
-            aria-current={isClientsRoute ? "page" : undefined}
+        <div className="site-header__actions">
+          <div className="site-header__portal">
+            <span className="site-header__portal-title">
+              PORTAL DE GESTÃO DE CLIENTES
+            </span>
+            <span className="site-header__portal-sub">
+              CONSULTA E CADASTRO INTEGRADO
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-brand-green site-header__cta"
+            onClick={onNewClient}
           >
-            Clientes
-          </Link>
-        </nav>
+            <UserPlus size={18} aria-hidden="true" />
+            <span>Novo Cliente</span>
+          </button>
+        </div>
       </div>
     </header>
   );

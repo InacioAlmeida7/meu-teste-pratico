@@ -54,6 +54,7 @@ a {
   color: var(--color-brand-primary);
 }
 
+img,
 svg {
   display: block;
 }
@@ -105,7 +106,7 @@ svg {
 
 .app-main {
   flex: 1;
-  padding-block: var(--space-6) var(--space-10);
+  padding-block: 0 var(--space-10);
 }
 
 .container {
@@ -117,12 +118,86 @@ svg {
 
 @media (min-width: 768px) {
   .app-main {
-    padding-block: var(--space-8) var(--space-12);
+    padding-block: 0 var(--space-12);
   }
 
   .container {
     padding-inline: var(--space-6);
   }
+}
+
+/* Transição discreta de entrada para conteúdo de páginas */
+@keyframes page-fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter {
+    animation: page-fade-slide 180ms ease-out both;
+  }
+}
+
+/* Toast global acessível exibido após cadastro em memória */
+.app-toast-wrap {
+  padding-block-start: var(--space-5);
+}
+
+.app-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-success-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-success-bg);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-toast__body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.app-toast__icon {
+  flex-shrink: 0;
+  color: var(--color-accent-green-text);
+}
+
+.app-toast__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-inline-size: 2rem;
+  min-block-size: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.app-toast__close:hover {
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
 }
 
 /* Primitivas de botão consistentes */
@@ -143,7 +218,9 @@ svg {
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
-    color var(--transition-fast);
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .btn:disabled {
@@ -158,6 +235,23 @@ svg {
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--color-brand-primary-hover);
+}
+
+.btn-brand-green {
+  background-color: var(--color-btn-green);
+  color: var(--color-text-on-brand);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-brand-green:hover:not(:disabled) {
+  background-color: var(--color-btn-green-hover);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn-brand-green:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
 }
 
 .btn-secondary {
@@ -186,17 +280,5 @@ svg {
 @media (pointer: coarse) {
   .btn {
     min-block-size: 2.75rem;
-  }
-}
-
-/* Respeito estrito à preferência de redução de movimento */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
 }

@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useRef, type PointerEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, X } from "lucide-react";
-import { useForm, useWatch } from "react-hook-form";
+import { AlertCircle, Building2, X } from "lucide-react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import {
   ESTADO_CIVIL_OPTIONS,
   clienteSchema,
-  getTodayLocalIso,
   type ClienteFormInput,
   type ClienteFormOutput,
 } from "../../schemas/clienteSchema";
 import type { Agencia, Cliente } from "../../types/models";
 import { onlyDigits } from "../../utils/normalizers";
+import { DatePicker } from "../DatePicker/DatePicker";
+import {
+  SelectDropdown,
+  type SelectOption,
+} from "../SelectDropdown/SelectDropdown";
 import "./ClientFormModal.css";
 
 interface ClientFormModalProps {
@@ -37,8 +41,8 @@ const DEFAULT_VALUES: ClienteFormInput = {
 
 /**
  * Modal de cadastro de novo cliente construído com `<dialog>` nativo (`showModal`/`close`),
- * React Hook Form e Zod. O navegador gerencia top-layer, inert do fundo, `Esc` e
- * retorno automático de foco ao botão acionador.
+ * React Hook Form, Zod e `DatePicker` customizado em português.
+ * O navegador gerencia top-layer, inert do fundo, `Esc` e retorno de foco ao acionador.
  */
 export function ClientFormModal({
   isOpen,
@@ -50,22 +54,61 @@ export function ClientFormModal({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pressedOutsideRef = useRef(false);
 
-  const sortedAgencias = useMemo(
-    () => [...agencias].sort((a, b) => a.codigo - b.codigo),
-    [agencias],
+  const agencyOptions = useMemo<SelectOption[]>(() => {
+    const sorted = [...agencias].sort((a, b) => a.codigo - b.codigo);
+    return sorted.map((agencia) => ({
+      value: String(agencia.codigo),
+      code: String(agencia.codigo),
+      label: agencia.nome,
+    }));
+  }, [agencias]);
+
+  const estadoCivilOptions = useMemo<SelectOption[]>(
+    () =>
+      ESTADO_CIVIL_OPTIONS.map((option) => ({
+        value: option,
+        label: option,
+      })),
+    [],
   );
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
-    control,
-    formState: { errors, isSubmitting },
+    formState: { errors, dirtyFields, isSubmitted, isSubmitting },
   } = useForm<ClienteFormInput, unknown, ClienteFormOutput>({
     resolver: zodResolver(clienteSchema),
     mode: "onTouched",
     defaultValues: DEFAULT_VALUES,
   });
+
+  const nomeError =
+    isSubmitted || dirtyFields.nome ? errors.nome : undefined;
+  const nomeSocialError =
+    isSubmitted || dirtyFields.nomeSocial ? errors.nomeSocial : undefined;
+  const cpfCnpjError =
+    isSubmitted || dirtyFields.cpfCnpj ? errors.cpfCnpj : undefined;
+  const rgError = isSubmitted || dirtyFields.rg ? errors.rg : undefined;
+  const dataNascimentoError =
+    isSubmitted || dirtyFields.dataNascimento
+      ? errors.dataNascimento
+      : undefined;
+  const estadoCivilError =
+    isSubmitted || dirtyFields.estadoCivil ? errors.estadoCivil : undefined;
+  const emailError =
+    isSubmitted || dirtyFields.email ? errors.email : undefined;
+  const enderecoError =
+    isSubmitted || dirtyFields.endereco ? errors.endereco : undefined;
+  const rendaAnualError =
+    isSubmitted || dirtyFields.rendaAnual ? errors.rendaAnual : undefined;
+  const patrimonioError =
+    isSubmitted || dirtyFields.patrimonio ? errors.patrimonio : undefined;
+  const codigoAgenciaError =
+    isSubmitted || dirtyFields.codigoAgencia
+      ? errors.codigoAgencia
+      : undefined;
 
   const watchedCpfCnpj = useWatch({ control, name: "cpfCnpj" }) ?? "";
   const cpfDigits = onlyDigits(watchedCpfCnpj);
@@ -103,7 +146,7 @@ export function ClientFormModal({
     event: PointerEvent<HTMLDialogElement>,
   ): boolean {
     const dialog = dialogRef.current;
-    if (!dialog) {
+    if (!dialog || event.target !== dialog) {
       return false;
     }
     const rect = dialog.getBoundingClientRect();
@@ -148,13 +191,17 @@ export function ClientFormModal({
     onClose();
   }
 
-  const todayIso = getTodayLocalIso();
-
   return (
     <dialog
       ref={dialogRef}
       className="client-modal"
       aria-labelledby="client-form-title"
+      onCancel={(event) => {
+        // Se o popover do DatePicker estiver aberto, o Esc fecha apenas o calendário.
+        if (event.currentTarget.querySelector(":popover-open")) {
+          event.preventDefault();
+        }
+      }}
       onClose={handleNativeClose}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
@@ -205,17 +252,17 @@ export function ClientFormModal({
                 className="client-modal__input"
                 autoComplete="name"
                 required
-                aria-invalid={errors.nome ? "true" : undefined}
-                aria-describedby={errors.nome ? "field-nome-error" : undefined}
+                aria-invalid={nomeError ? "true" : undefined}
+                aria-describedby={nomeError ? "field-nome-error" : undefined}
                 {...register("nome")}
               />
-              {errors.nome ? (
+              {nomeError ? (
                 <p
                   id="field-nome-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.nome.message}
+                  {nomeError.message}
                 </p>
               ) : null}
             </div>
@@ -229,19 +276,19 @@ export function ClientFormModal({
                 type="text"
                 className="client-modal__input"
                 placeholder="Opcional"
-                aria-invalid={errors.nomeSocial ? "true" : undefined}
+                aria-invalid={nomeSocialError ? "true" : undefined}
                 aria-describedby={
-                  errors.nomeSocial ? "field-nomeSocial-error" : undefined
+                  nomeSocialError ? "field-nomeSocial-error" : undefined
                 }
                 {...register("nomeSocial")}
               />
-              {errors.nomeSocial ? (
+              {nomeSocialError ? (
                 <p
                   id="field-nomeSocial-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.nomeSocial.message}
+                  {nomeSocialError.message}
                 </p>
               ) : null}
             </div>
@@ -262,10 +309,10 @@ export function ClientFormModal({
                 autoCorrect="off"
                 spellCheck={false}
                 required
-                aria-invalid={errors.cpfCnpj ? "true" : undefined}
+                aria-invalid={cpfCnpjError ? "true" : undefined}
                 aria-describedby={
                   [
-                    errors.cpfCnpj ? "field-cpfCnpj-error" : null,
+                    cpfCnpjError ? "field-cpfCnpj-error" : null,
                     hasDuplicateCpf ? "field-cpfCnpj-duplicate" : null,
                   ]
                     .filter(Boolean)
@@ -273,13 +320,13 @@ export function ClientFormModal({
                 }
                 {...register("cpfCnpj")}
               />
-              {errors.cpfCnpj ? (
+              {cpfCnpjError ? (
                 <p
                   id="field-cpfCnpj-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.cpfCnpj.message}
+                  {cpfCnpjError.message}
                 </p>
               ) : null}
               {hasDuplicateCpf ? (
@@ -307,17 +354,17 @@ export function ClientFormModal({
                 placeholder="Opcional (ex.: ES1234567 ou ISENTO)"
                 autoCorrect="off"
                 spellCheck={false}
-                aria-invalid={errors.rg ? "true" : undefined}
-                aria-describedby={errors.rg ? "field-rg-error" : undefined}
+                aria-invalid={rgError ? "true" : undefined}
+                aria-describedby={rgError ? "field-rg-error" : undefined}
                 {...register("rg")}
               />
-              {errors.rg ? (
+              {rgError ? (
                 <p
                   id="field-rg-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.rg.message}
+                  {rgError.message}
                 </p>
               ) : null}
             </div>
@@ -332,29 +379,33 @@ export function ClientFormModal({
                   *
                 </span>
               </label>
-              <input
-                id="field-dataNascimento"
-                type="date"
-                className="client-modal__input tabular-nums"
-                min="1900-01-01"
-                max={todayIso}
-                autoComplete="bday"
-                required
-                aria-invalid={errors.dataNascimento ? "true" : undefined}
-                aria-describedby={
-                  errors.dataNascimento
-                    ? "field-dataNascimento-error"
-                    : undefined
-                }
-                {...register("dataNascimento")}
+              <Controller
+                name="dataNascimento"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    id="field-dataNascimento"
+                    name={field.name}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    required
+                    ariaInvalid={Boolean(dataNascimentoError)}
+                    ariaDescribedBy={
+                      dataNascimentoError
+                        ? "field-dataNascimento-error"
+                        : undefined
+                    }
+                  />
+                )}
               />
-              {errors.dataNascimento ? (
+              {dataNascimentoError ? (
                 <p
                   id="field-dataNascimento-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.dataNascimento.message}
+                  {dataNascimentoError.message}
                 </p>
               ) : null}
             </div>
@@ -366,30 +417,33 @@ export function ClientFormModal({
                   *
                 </span>
               </label>
-              <select
-                id="field-estadoCivil"
-                className="client-modal__select"
-                required
-                aria-invalid={errors.estadoCivil ? "true" : undefined}
-                aria-describedby={
-                  errors.estadoCivil ? "field-estadoCivil-error" : undefined
-                }
-                {...register("estadoCivil")}
-              >
-                <option value="">Selecione...</option>
-                {ESTADO_CIVIL_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              {errors.estadoCivil ? (
+              <Controller
+                name="estadoCivil"
+                control={control}
+                render={({ field }) => (
+                  <SelectDropdown
+                    id="field-estadoCivil"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    options={estadoCivilOptions}
+                    placeholder="Selecione..."
+                    required
+                    ariaInvalid={Boolean(estadoCivilError)}
+                    ariaDescribedBy={
+                      estadoCivilError ? "field-estadoCivil-error" : undefined
+                    }
+                    listboxLabel="Opções de estado civil"
+                  />
+                )}
+              />
+              {estadoCivilError ? (
                 <p
                   id="field-estadoCivil-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.estadoCivil.message}
+                  {estadoCivilError.message}
                 </p>
               ) : null}
             </div>
@@ -411,19 +465,19 @@ export function ClientFormModal({
                 autoCapitalize="none"
                 spellCheck={false}
                 required
-                aria-invalid={errors.email ? "true" : undefined}
+                aria-invalid={emailError ? "true" : undefined}
                 aria-describedby={
-                  errors.email ? "field-email-error" : undefined
+                  emailError ? "field-email-error" : undefined
                 }
                 {...register("email")}
               />
-              {errors.email ? (
+              {emailError ? (
                 <p
                   id="field-email-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.email.message}
+                  {emailError.message}
                 </p>
               ) : null}
             </div>
@@ -442,19 +496,19 @@ export function ClientFormModal({
                 placeholder="Rua, número - Cidade UF"
                 autoComplete="street-address"
                 required
-                aria-invalid={errors.endereco ? "true" : undefined}
+                aria-invalid={enderecoError ? "true" : undefined}
                 aria-describedby={
-                  errors.endereco ? "field-endereco-error" : undefined
+                  enderecoError ? "field-endereco-error" : undefined
                 }
                 {...register("endereco")}
               />
-              {errors.endereco ? (
+              {enderecoError ? (
                 <p
                   id="field-endereco-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.endereco.message}
+                  {enderecoError.message}
                 </p>
               ) : null}
             </div>
@@ -473,19 +527,19 @@ export function ClientFormModal({
                 className="client-modal__input tabular-nums"
                 placeholder="Ex.: 85000,00"
                 required
-                aria-invalid={errors.rendaAnual ? "true" : undefined}
+                aria-invalid={rendaAnualError ? "true" : undefined}
                 aria-describedby={
-                  errors.rendaAnual ? "field-rendaAnual-error" : undefined
+                  rendaAnualError ? "field-rendaAnual-error" : undefined
                 }
                 {...register("rendaAnual")}
               />
-              {errors.rendaAnual ? (
+              {rendaAnualError ? (
                 <p
                   id="field-rendaAnual-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.rendaAnual.message}
+                  {rendaAnualError.message}
                 </p>
               ) : null}
             </div>
@@ -504,19 +558,19 @@ export function ClientFormModal({
                 className="client-modal__input tabular-nums"
                 placeholder="Ex.: 250000,00"
                 required
-                aria-invalid={errors.patrimonio ? "true" : undefined}
+                aria-invalid={patrimonioError ? "true" : undefined}
                 aria-describedby={
-                  errors.patrimonio ? "field-patrimonio-error" : undefined
+                  patrimonioError ? "field-patrimonio-error" : undefined
                 }
                 {...register("patrimonio")}
               />
-              {errors.patrimonio ? (
+              {patrimonioError ? (
                 <p
                   id="field-patrimonio-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.patrimonio.message}
+                  {patrimonioError.message}
                 </p>
               ) : null}
             </div>
@@ -531,32 +585,36 @@ export function ClientFormModal({
                   *
                 </span>
               </label>
-              <select
-                id="field-codigoAgencia"
-                className="client-modal__select"
-                required
-                aria-invalid={errors.codigoAgencia ? "true" : undefined}
-                aria-describedby={
-                  errors.codigoAgencia
-                    ? "field-codigoAgencia-error"
-                    : undefined
-                }
-                {...register("codigoAgencia")}
-              >
-                <option value="">Selecione uma agência...</option>
-                {sortedAgencias.map((agencia) => (
-                  <option key={agencia.id} value={String(agencia.codigo)}>
-                    {agencia.codigo} — {agencia.nome}
-                  </option>
-                ))}
-              </select>
-              {errors.codigoAgencia ? (
+              <Controller
+                name="codigoAgencia"
+                control={control}
+                render={({ field }) => (
+                  <SelectDropdown
+                    id="field-codigoAgencia"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    options={agencyOptions}
+                    placeholder="Selecione uma agência..."
+                    leadingIcon={<Building2 size={17} />}
+                    required
+                    ariaInvalid={Boolean(codigoAgenciaError)}
+                    ariaDescribedBy={
+                      codigoAgenciaError
+                        ? "field-codigoAgencia-error"
+                        : undefined
+                    }
+                    listboxLabel="Agências disponíveis"
+                  />
+                )}
+              />
+              {codigoAgenciaError ? (
                 <p
                   id="field-codigoAgencia-error"
                   className="client-modal__error"
                   role="alert"
                 >
-                  {errors.codigoAgencia.message}
+                  {codigoAgenciaError.message}
                 </p>
               ) : null}
             </div>
@@ -573,7 +631,7 @@ export function ClientFormModal({
           </button>
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-brand-green"
             disabled={isSubmitting}
           >
             Cadastrar cliente

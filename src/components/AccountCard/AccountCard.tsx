@@ -1,3 +1,4 @@
+import { CreditCard, PiggyBank, Wallet } from "lucide-react";
 import type { Conta } from "../../types/models";
 import { formatCurrencyBRL } from "../../utils/formatters";
 import "./AccountCard.css";
@@ -8,7 +9,7 @@ interface AccountCardProps {
 
 /**
  * Cartão financeiro da conta bancária (corrente ou poupança), com alinhamento
- * tabular nos valores monetários e barra visual de crédito disponível em CSS puro.
+ * tabular nos valores monetários, ícones institucionais e barra visual de crédito em CSS puro.
  */
 export function AccountCard({ conta }: AccountCardProps) {
   const isCorrente = conta.tipo === "corrente";
@@ -34,20 +35,38 @@ export function AccountCard({ conta }: AccountCardProps) {
   return (
     <article className="account-card">
       <header className="account-card__header">
-        <span
-          className={
-            isCorrente
-              ? "account-card__type account-card__type--corrente"
-              : "account-card__type account-card__type--poupanca"
-          }
-        >
-          {isCorrente ? "Conta Corrente" : "Conta Poupança"}
-        </span>
+        <div className="account-card__type-group">
+          {isCorrente ? (
+            <CreditCard
+              size={16}
+              className="account-card__type-icon"
+              aria-hidden="true"
+            />
+          ) : (
+            <PiggyBank
+              size={16}
+              className="account-card__type-icon"
+              aria-hidden="true"
+            />
+          )}
+          <span
+            className={
+              isCorrente
+                ? "account-card__type account-card__type--corrente"
+                : "account-card__type account-card__type--poupanca"
+            }
+          >
+            {isCorrente ? "Conta Corrente" : "Conta Poupança"}
+          </span>
+        </div>
         <span className="account-card__id tabular-nums">{conta.id}</span>
       </header>
 
       <div className="account-card__balance">
-        <span className="account-card__balance-label">Saldo atual</span>
+        <span className="account-card__balance-label">
+          <Wallet size={13} className="account-card__inline-icon" aria-hidden="true" />
+          <span>Saldo atual</span>
+        </span>
         <strong className={balanceClass}>
           {formatCurrencyBRL(conta.saldo)}
         </strong>

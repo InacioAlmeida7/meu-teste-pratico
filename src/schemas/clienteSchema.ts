@@ -86,8 +86,8 @@ export const clienteSchema = z.object({
     .trim()
     .min(1, "Informe a data de nascimento.")
     .refine(
-      (value) => /^\d{4}-\d{2}-\d{2}$/.test(value),
-      "Informe uma data válida no formato AAAA-MM-DD.",
+      (value) => /^(?:\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})$/.test(value),
+      "Informe uma data válida no formato DD/MM/AAAA.",
     )
     .refine(
       (value) => !Number.isNaN(parseDate(value).getTime()),
