@@ -21,6 +21,7 @@ export function ClientListPage() {
   const {
     searchQuery,
     selectedAgencia,
+    documentType,
     currentPage,
     totalPages,
     totalItems,
@@ -30,6 +31,7 @@ export function ClientListPage() {
     paginatedClientes,
     setSearchQuery,
     setSelectedAgencia,
+    setDocumentType,
     setCurrentPage,
     clearFilters,
   } = useClientFilters(clientes);
@@ -124,6 +126,8 @@ export function ClientListPage() {
             <SearchToolbar
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+              documentType={documentType}
+              onDocumentTypeChange={setDocumentType}
               selectedAgencia={selectedAgencia}
               onAgenciaChange={setSelectedAgencia}
               agencias={agencias}
@@ -137,7 +141,7 @@ export function ClientListPage() {
                 title="Nenhum cliente encontrado"
                 description={
                   hasActiveFilters
-                    ? "Nenhum registro corresponde à busca ou agência selecionada."
+                    ? "Nenhum registro corresponde aos filtros selecionados."
                     : "A planilha de clientes não retornou registros válidos."
                 }
                 actionLabel={hasActiveFilters ? "Limpar filtros" : undefined}

@@ -1,21 +1,33 @@
-import { useEffect, useMemo } from "react";
 import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import {
+  AlertTriangle,
   ArrowLeft,
   Briefcase,
   Building2,
   Calendar,
+  ChevronRight,
+  CreditCard,
   FileText,
   Heart,
   IdCard,
   Landmark,
+  LayoutGrid,
   Mail,
   MapPin,
+  PiggyBank,
   User,
   UserX,
   Wallet,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { AccountCard } from "../../components/AccountCard/AccountCard";
+import { AccountDrawer } from "../../components/AccountDrawer/AccountDrawer";
 import { AgencyCard } from "../../components/AgencyCard/AgencyCard";
 import { StatusMessage } from "../../components/StatusMessage/StatusMessage";
 import { useBankData } from "../../context/useBankData";
@@ -26,6 +38,14 @@ import {
 } from "../../utils/formatters";
 import { onlyDigits } from "../../utils/normalizers";
 import "./ClientDetailPage.css";
+
+type DetailTabId = "overview" | "accounts" | "profile";
+
+const DETAIL_TABS: readonly { id: DetailTabId; label: string }[] = [
+  { id: "overview", label: "Visão Resumo" },
+  { id: "accounts", label: "Contas Bancárias" },
+  { id: "profile", label: "Cadastro e Agência" },
+];
 
 function decodeParam(value: string | undefined): string {
   if (!value) {
@@ -50,15 +70,44 @@ function getInitials(name: string): string {
 }
 
 /**
- * Página de detalhes do cliente (`/clientes/:id`).
- * Apresenta faixa institucional com avatar e identificação, grade conectada
- * de 2 colunas no desktop (Dados Cadastrais + Agência Vinculada) e contas bancárias.
+ * Define o arranjo da grade de contas para evitar espaços vazios no canto inferior:
+ * - 2 ou múltiplos pares (4, 6...): 2 colunas no desktop.
+ * - 3 ou múltiplos de 3 (3, 6...): 3 colunas alinhadas horizontalmente no desktop.
+ * - 1 ou ímpares maiores (5, 7...): lista em coluna única limpa.
+ */
+function getAccountsGridClass(count: number): string {
+  if (count <= 1) {
+    return "client-detail__accounts-grid client-detail__accounts-grid--single";
+  }
+  if (count === 3 || (count > 3 && count % 3 === 0)) {
+    return "client-detail__accounts-grid client-detail__accounts-grid--three";
+  }
+  if (count % 2 === 0) {
+    return "client-detail__accounts-grid client-detail__accounts-grid--two";
+  }
+  return "client-detail__accounts-grid client-detail__accounts-grid--stack";
+}
+
+/**
+ * Página de detalhes interativa do cliente (`/clientes/:id`).
+ * Reúne resumo financeiro consolidado (3 KPIs), navegação por abas acessíveis,
+ * cards de contas clicáveis com Drawer lateral animado, dados cadastrais e agência.
  */
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const targetId = decodeParam(id);
   const { clientes, contas, agencias, isLoading, error, reload } =
     useBankData();
+
+  const [activeTab, setActiveTab] = useState<DetailTabId>("overview");
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
+    null,
+  );
+  const tabRefs = useRef<Record<DetailTabId, HTMLButtonElement | null>>({
+    overview: null,
+    accounts: null,
+    profile: null,
+  });
 
   const cliente = useMemo(
     () => clientes.find((item) => item.id === targetId),
@@ -82,6 +131,47 @@ export function ClientDetailPage() {
     );
   }, [contas, cliente]);
 
+  const financialSummary = useMemo(() => {
+    let totalSaldo = 0;
+    let totalLimiteCredito = 0;
+    let totalCreditoDisponivel = 0;
+
+    for (const conta of clienteContas) {
+      totalSaldo += conta.saldo;
+      totalLimiteCredito += conta.limiteCredito;
+      totalCreditoDisponivel += conta.creditoDisponivel;
+    }
+
+    const totalCreditoUtilizado = Math.max(
+      0,
+      totalLimiteCredito - totalCreditoDisponivel,
+    );
+    const availablePercent =
+      totalLimiteCredito > 0
+        ? Math.min(
+            100,
+            Math.max(0, (totalCreditoDisponivel / totalLimiteCredito) * 100),
+          )
+        : 0;
+
+    return {
+      totalSaldo,
+      totalLimiteCredito,
+      totalCreditoDisponivel,
+      totalCreditoUtilizado,
+      availablePercent,
+    };
+  }, [clienteContas]);
+
+  const activeAccountId = useMemo(() => {
+    if (!selectedAccountId) {
+      return null;
+    }
+    return clienteContas.some((item) => item.id === selectedAccountId)
+      ? selectedAccountId
+      : null;
+  }, [clienteContas, selectedAccountId]);
+
   useEffect(() => {
     if (isLoading) {
       document.title = "Carregando cliente | Gestão de Clientes Bancários";
@@ -93,6 +183,39 @@ export function ClientDetailPage() {
     }
     document.title = `${cliente.nome} | Gestão de Clientes Bancários`;
   }, [isLoading, cliente]);
+
+  function activateTab(tabId: DetailTabId, shouldFocus: boolean) {
+    setActiveTab(tabId);
+    const button = tabRefs.current[tabId];
+    if (button) {
+      button.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (shouldFocus) {
+        button.focus();
+      }
+    }
+  }
+
+  function handleTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) {
+    let nextIndex: number | null = null;
+
+    if (event.key === "ArrowRight") {
+      nextIndex = (currentIndex + 1) % DETAIL_TABS.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = (currentIndex - 1 + DETAIL_TABS.length) % DETAIL_TABS.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = DETAIL_TABS.length - 1;
+    }
+
+    if (nextIndex !== null) {
+      event.preventDefault();
+      activateTab(DETAIL_TABS[nextIndex].id, true);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -159,6 +282,532 @@ export function ClientDetailPage() {
 
   const isPessoaJuridica = onlyDigits(cliente.cpfCnpj).length === 14;
   const initials = getInitials(cliente.nome);
+  const agenciaLabel = agencia
+    ? `${agencia.codigo} · ${agencia.nome}`
+    : `Código ${cliente.codigoAgencia} (não localizada)`;
+
+  const totalSaldoClass =
+    financialSummary.totalSaldo > 0
+      ? "detail-kpi__value detail-kpi__value--positive tabular-nums"
+      : financialSummary.totalSaldo < 0
+        ? "detail-kpi__value detail-kpi__value--negative tabular-nums"
+        : "detail-kpi__value tabular-nums";
+
+  const accountsGridClass = getAccountsGridClass(clienteContas.length);
+
+  const overviewSection = (
+    <div className="detail-overview">
+      <section
+        className="detail-overview__card"
+        aria-labelledby="overview-basics-heading"
+      >
+        <div className="detail-overview__head">
+          <h2 id="overview-basics-heading" className="client-detail__section-title">
+            <User
+              size={19}
+              className="client-detail__section-icon"
+              aria-hidden="true"
+            />
+            <span>Dados Básicos</span>
+          </h2>
+          <button
+            type="button"
+            className="detail-overview__link-btn"
+            onClick={() => activateTab("profile", false)}
+          >
+            <span>Ver cadastro completo</span>
+            <ChevronRight size={15} aria-hidden="true" />
+          </button>
+        </div>
+
+        <dl className="detail-overview__basics-grid">
+          <div className="client-detail__field">
+            <dt className="client-detail__term">
+              <User
+                size={13}
+                className="client-detail__term-icon"
+                aria-hidden="true"
+              />
+              <span>Nome completo</span>
+            </dt>
+            <dd className="client-detail__desc">{cliente.nome}</dd>
+          </div>
+
+          {cliente.nomeSocial ? (
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <User
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>Nome social</span>
+              </dt>
+              <dd className="client-detail__desc">{cliente.nomeSocial}</dd>
+            </div>
+          ) : null}
+
+          <div className="client-detail__field">
+            <dt className="client-detail__term">
+              <IdCard
+                size={13}
+                className="client-detail__term-icon"
+                aria-hidden="true"
+              />
+              <span>{isPessoaJuridica ? "CNPJ" : "CPF"}</span>
+            </dt>
+            <dd className="client-detail__desc tabular-nums">
+              {formatCpfCnpj(cliente.cpfCnpj)}
+            </dd>
+          </div>
+
+          <div className="client-detail__field">
+            <dt className="client-detail__term">
+              <Calendar
+                size={13}
+                className="client-detail__term-icon"
+                aria-hidden="true"
+              />
+              <span>Data de nascimento</span>
+            </dt>
+            <dd className="client-detail__desc tabular-nums">
+              {formatDateBR(cliente.dataNascimento)}
+            </dd>
+          </div>
+
+          <div className="client-detail__field">
+            <dt className="client-detail__term">
+              <Mail
+                size={13}
+                className="client-detail__term-icon"
+                aria-hidden="true"
+              />
+              <span>E-mail</span>
+            </dt>
+            <dd className="client-detail__desc client-detail__desc--break">
+              {cliente.email}
+            </dd>
+          </div>
+
+          <div className="client-detail__field">
+            <dt className="client-detail__term">
+              <Building2
+                size={13}
+                className="client-detail__term-icon"
+                aria-hidden="true"
+              />
+              <span>Agência vinculada</span>
+            </dt>
+            <dd
+              className={
+                agencia
+                  ? "client-detail__desc tabular-nums"
+                  : "client-detail__desc detail-overview__agency-warning tabular-nums"
+              }
+            >
+              {!agencia ? (
+                <AlertTriangle size={14} aria-hidden="true" />
+              ) : null}
+              <span>{agenciaLabel}</span>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section
+        className="detail-overview__card"
+        aria-labelledby="overview-accounts-heading"
+      >
+        <div className="detail-overview__head">
+          <div>
+            <h2
+              id="overview-accounts-heading"
+              className="client-detail__section-title"
+            >
+              <Landmark
+                size={19}
+                className="client-detail__section-icon"
+                aria-hidden="true"
+              />
+              <span>
+                {clienteContas.length === 1
+                  ? "Resumo da Conta Bancária"
+                  : "Resumo das Contas Bancárias"}
+              </span>
+            </h2>
+            <p className="client-detail__section-hint">
+              {clienteContas.length === 0
+                ? "Este cliente ainda não possui contas cadastradas."
+                : "Selecione uma conta para abrir o detalhamento lateral ou acesse a aba Contas Bancárias."}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="detail-overview__link-btn"
+            onClick={() => activateTab("accounts", false)}
+          >
+            <span>
+              {clienteContas.length === 1
+                ? "Ver conta detalhada"
+                : "Ver todas as contas"}
+            </span>
+            <ChevronRight size={15} aria-hidden="true" />
+          </button>
+        </div>
+
+        {clienteContas.length === 0 ? (
+          <div className="detail-overview__empty">
+            <Landmark
+              size={22}
+              className="client-detail__empty-icon"
+              aria-hidden="true"
+            />
+            <p className="client-detail__empty-text">
+              Nenhuma conta bancária vinculada a este cliente.
+            </p>
+          </div>
+        ) : (
+          <ul className="detail-overview__accounts-list">
+            {clienteContas.map((conta) => {
+              const isCorrente = conta.tipo === "corrente";
+              const hasLimit = conta.limiteCredito > 0;
+              const isSelected = activeAccountId === conta.id;
+              const rowBalanceClass =
+                conta.saldo > 0
+                  ? "detail-overview__account-balance detail-overview__account-balance--positive tabular-nums"
+                  : conta.saldo < 0
+                    ? "detail-overview__account-balance detail-overview__account-balance--negative tabular-nums"
+                    : "detail-overview__account-balance tabular-nums";
+
+              return (
+                <li
+                  key={conta.id}
+                  className={
+                    isSelected
+                      ? "detail-overview__account-row detail-overview__account-row--selected"
+                      : "detail-overview__account-row"
+                  }
+                >
+                  <div className="detail-overview__account-main">
+                    <span
+                      className={
+                        isCorrente
+                          ? "detail-overview__account-type detail-overview__account-type--corrente"
+                          : "detail-overview__account-type detail-overview__account-type--poupanca"
+                      }
+                    >
+                      {isCorrente ? (
+                        <CreditCard size={14} aria-hidden="true" />
+                      ) : (
+                        <PiggyBank size={14} aria-hidden="true" />
+                      )}
+                      <span>
+                        {isCorrente ? "Conta Corrente" : "Conta Poupança"}
+                      </span>
+                    </span>
+                    <span className="detail-overview__account-id tabular-nums">
+                      {conta.id}
+                    </span>
+                  </div>
+
+                  <div className="detail-overview__account-figures">
+                    <div className="detail-overview__account-metric">
+                      <span className="detail-overview__account-metric-label">
+                        Saldo
+                      </span>
+                      <strong className={rowBalanceClass}>
+                        {formatCurrencyBRL(conta.saldo)}
+                      </strong>
+                    </div>
+
+                    <div className="detail-overview__account-metric">
+                      <span className="detail-overview__account-metric-label">
+                        Crédito disponível
+                      </span>
+                      <span className="detail-overview__account-credit tabular-nums">
+                        {hasLimit
+                          ? `${formatCurrencyBRL(conta.creditoDisponivel)} / ${formatCurrencyBRL(conta.limiteCredito)}`
+                          : "Sem limite contratado"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="detail-overview__account-btn"
+                    aria-expanded={isSelected}
+                    onClick={() => setSelectedAccountId(conta.id)}
+                  >
+                    <span>Detalhar</span>
+                    <span className="sr-only">
+                      {" "}
+                      {isCorrente ? "Conta Corrente" : "Conta Poupança"}{" "}
+                      {conta.id}
+                    </span>
+                    <ChevronRight size={15} aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+
+  const accountsSection = (
+    <section
+      className="client-detail__section"
+      aria-labelledby="accounts-heading"
+    >
+      <div className="client-detail__section-header">
+        <div>
+          <h2 id="accounts-heading" className="client-detail__section-title">
+            <Landmark
+              size={19}
+              className="client-detail__section-icon"
+              aria-hidden="true"
+            />
+            <span>Contas Bancárias</span>
+          </h2>
+          {clienteContas.length > 0 ? (
+            <p className="client-detail__section-hint">
+              Clique em uma conta para abrir o detalhamento interativo de
+              limites e crédito.
+            </p>
+          ) : null}
+        </div>
+        <span className="client-detail__count tabular-nums">
+          {clienteContas.length}{" "}
+          {clienteContas.length === 1 ? "conta" : "contas"}
+        </span>
+      </div>
+
+      {financialSummary.totalLimiteCredito > 0 ? (
+        <div className="client-detail__credit-overview">
+          <div className="client-detail__credit-overview-head">
+            <span className="client-detail__credit-overview-label">
+              Uso consolidado de limite nas contas
+            </span>
+            <span className="client-detail__credit-overview-ratio tabular-nums">
+              {Math.round(financialSummary.availablePercent)}% disponível (
+              {formatCurrencyBRL(financialSummary.totalCreditoDisponivel)} de{" "}
+              {formatCurrencyBRL(financialSummary.totalLimiteCredito)})
+            </span>
+          </div>
+          <div
+            className="client-detail__credit-overview-track"
+            role="progressbar"
+            aria-label="Crédito disponível consolidado"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(financialSummary.availablePercent)}
+          >
+            <div
+              className="client-detail__credit-overview-fill"
+              style={{ width: `${financialSummary.availablePercent}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {clienteContas.length === 0 ? (
+        <div className="client-detail__empty-accounts">
+          <Landmark
+            size={24}
+            className="client-detail__empty-icon"
+            aria-hidden="true"
+          />
+          <p className="client-detail__empty-text">
+            Nenhuma conta bancária vinculada a este cliente.
+          </p>
+        </div>
+      ) : (
+        <div className={accountsGridClass}>
+          {clienteContas.map((conta) => (
+            <AccountCard
+              key={conta.id}
+              conta={conta}
+              isSelected={activeAccountId === conta.id}
+              onSelect={(selected) => setSelectedAccountId(selected.id)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
+  const profileAndAgencySection = (
+    <div className="client-detail__top-grid">
+      <section
+        className="client-detail__section"
+        aria-labelledby="personal-data-heading"
+      >
+        <h2 id="personal-data-heading" className="client-detail__section-title">
+          <User
+            size={19}
+            className="client-detail__section-icon"
+            aria-hidden="true"
+          />
+          <span>Dados Cadastrais</span>
+        </h2>
+
+        <div className="client-detail__card">
+          <dl className="client-detail__grid">
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <User
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>Nome completo</span>
+              </dt>
+              <dd className="client-detail__desc">{cliente.nome}</dd>
+            </div>
+
+            {cliente.nomeSocial ? (
+              <div className="client-detail__field">
+                <dt className="client-detail__term">
+                  <User
+                    size={13}
+                    className="client-detail__term-icon"
+                    aria-hidden="true"
+                  />
+                  <span>Nome social</span>
+                </dt>
+                <dd className="client-detail__desc">{cliente.nomeSocial}</dd>
+              </div>
+            ) : null}
+
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <IdCard
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>CPF / CNPJ</span>
+              </dt>
+              <dd className="client-detail__desc tabular-nums">
+                {formatCpfCnpj(cliente.cpfCnpj)}
+              </dd>
+            </div>
+
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <FileText
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>RG</span>
+              </dt>
+              <dd className="client-detail__desc tabular-nums">
+                {cliente.rg ?? "Não informado"}
+              </dd>
+            </div>
+
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <Calendar
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>Data de nascimento</span>
+              </dt>
+              <dd className="client-detail__desc tabular-nums">
+                {formatDateBR(cliente.dataNascimento)}
+              </dd>
+            </div>
+
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <Heart
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>Estado civil</span>
+              </dt>
+              <dd className="client-detail__desc">{cliente.estadoCivil}</dd>
+            </div>
+
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <Mail
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>E-mail</span>
+              </dt>
+              <dd className="client-detail__desc client-detail__desc--break">
+                {cliente.email}
+              </dd>
+            </div>
+
+            <div className="client-detail__field client-detail__field--wide">
+              <dt className="client-detail__term">
+                <MapPin
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>Endereço</span>
+              </dt>
+              <dd className="client-detail__desc">{cliente.endereco}</dd>
+            </div>
+
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <Wallet
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>Renda anual</span>
+              </dt>
+              <dd className="client-detail__desc client-detail__desc--financial tabular-nums">
+                {formatCurrencyBRL(cliente.rendaAnual)}
+              </dd>
+            </div>
+
+            <div className="client-detail__field">
+              <dt className="client-detail__term">
+                <Briefcase
+                  size={13}
+                  className="client-detail__term-icon"
+                  aria-hidden="true"
+                />
+                <span>Patrimônio</span>
+              </dt>
+              <dd className="client-detail__desc client-detail__desc--financial tabular-nums">
+                {formatCurrencyBRL(cliente.patrimonio)}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section
+        className="client-detail__section"
+        aria-labelledby="agency-heading"
+      >
+        <h2 id="agency-heading" className="client-detail__section-title">
+          <Building2
+            size={19}
+            className="client-detail__section-icon"
+            aria-hidden="true"
+          />
+          <span>Agência Vinculada</span>
+        </h2>
+        <AgencyCard codigoAgencia={cliente.codigoAgencia} agencia={agencia} />
+      </section>
+    </div>
+  );
 
   return (
     <div className="client-detail">
@@ -187,7 +836,9 @@ export function ClientDetailPage() {
                 </p>
               ) : null}
               <div className="detail-hero__meta tabular-nums">
-                <span>{isPessoaJuridica ? "Pessoa Jurídica" : "Pessoa Física"}</span>
+                <span>
+                  {isPessoaJuridica ? "Pessoa Jurídica" : "Pessoa Física"}
+                </span>
                 <span aria-hidden="true">·</span>
                 <span>ID {cliente.id}</span>
                 <span aria-hidden="true">·</span>
@@ -199,220 +850,131 @@ export function ClientDetailPage() {
       </section>
 
       <div className="container client-detail__body page-enter">
-        <div className="client-detail__top-grid">
-          <section
-            className="client-detail__section"
-            aria-labelledby="personal-data-heading"
-          >
-            <h2
-              id="personal-data-heading"
-              className="client-detail__section-title"
-            >
-              <User
-                size={19}
-                className="client-detail__section-icon"
-                aria-hidden="true"
-              />
-              <span>Dados Cadastrais</span>
-            </h2>
-
-            <div className="client-detail__card">
-              <dl className="client-detail__grid">
-                <div className="client-detail__field">
-                  <dt className="client-detail__term">
-                    <User
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>Nome completo</span>
-                  </dt>
-                  <dd className="client-detail__desc">{cliente.nome}</dd>
-                </div>
-
-                {cliente.nomeSocial ? (
-                  <div className="client-detail__field">
-                    <dt className="client-detail__term">
-                      <User
-                        size={13}
-                        className="client-detail__term-icon"
-                        aria-hidden="true"
-                      />
-                      <span>Nome social</span>
-                    </dt>
-                    <dd className="client-detail__desc">{cliente.nomeSocial}</dd>
-                  </div>
-                ) : null}
-
-                <div className="client-detail__field">
-                  <dt className="client-detail__term">
-                    <IdCard
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>CPF / CNPJ</span>
-                  </dt>
-                  <dd className="client-detail__desc tabular-nums">
-                    {formatCpfCnpj(cliente.cpfCnpj)}
-                  </dd>
-                </div>
-
-                <div className="client-detail__field">
-                  <dt className="client-detail__term">
-                    <FileText
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>RG</span>
-                  </dt>
-                  <dd className="client-detail__desc tabular-nums">
-                    {cliente.rg ?? "Não informado"}
-                  </dd>
-                </div>
-
-                <div className="client-detail__field">
-                  <dt className="client-detail__term">
-                    <Calendar
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>Data de nascimento</span>
-                  </dt>
-                  <dd className="client-detail__desc tabular-nums">
-                    {formatDateBR(cliente.dataNascimento)}
-                  </dd>
-                </div>
-
-                <div className="client-detail__field">
-                  <dt className="client-detail__term">
-                    <Heart
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>Estado civil</span>
-                  </dt>
-                  <dd className="client-detail__desc">{cliente.estadoCivil}</dd>
-                </div>
-
-                <div className="client-detail__field">
-                  <dt className="client-detail__term">
-                    <Mail
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>E-mail</span>
-                  </dt>
-                  <dd className="client-detail__desc client-detail__desc--break">
-                    {cliente.email}
-                  </dd>
-                </div>
-
-                <div className="client-detail__field client-detail__field--wide">
-                  <dt className="client-detail__term">
-                    <MapPin
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>Endereço</span>
-                  </dt>
-                  <dd className="client-detail__desc">{cliente.endereco}</dd>
-                </div>
-
-                <div className="client-detail__field">
-                  <dt className="client-detail__term">
-                    <Wallet
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>Renda anual</span>
-                  </dt>
-                  <dd className="client-detail__desc client-detail__desc--financial tabular-nums">
-                    {formatCurrencyBRL(cliente.rendaAnual)}
-                  </dd>
-                </div>
-
-                <div className="client-detail__field">
-                  <dt className="client-detail__term">
-                    <Briefcase
-                      size={13}
-                      className="client-detail__term-icon"
-                      aria-hidden="true"
-                    />
-                    <span>Patrimônio</span>
-                  </dt>
-                  <dd className="client-detail__desc client-detail__desc--financial tabular-nums">
-                    {formatCurrencyBRL(cliente.patrimonio)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </section>
-
-          <section
-            className="client-detail__section"
-            aria-labelledby="agency-heading"
-          >
-            <h2 id="agency-heading" className="client-detail__section-title">
-              <Building2
-                size={19}
-                className="client-detail__section-icon"
-                aria-hidden="true"
-              />
-              <span>Agência Vinculada</span>
-            </h2>
-            <AgencyCard
-              codigoAgencia={cliente.codigoAgencia}
-              agencia={agencia}
-            />
-          </section>
-        </div>
-
-        <section
-          className="client-detail__section"
-          aria-labelledby="accounts-heading"
+        <dl
+          className="detail-kpi-bar"
+          aria-label="Resumo financeiro consolidado do cliente"
         >
-          <div className="client-detail__section-header">
-            <h2 id="accounts-heading" className="client-detail__section-title">
-              <Landmark
-                size={19}
-                className="client-detail__section-icon"
-                aria-hidden="true"
-              />
-              <span>Contas Bancárias</span>
-            </h2>
-            <span className="client-detail__count tabular-nums">
-              {clienteContas.length}{" "}
-              {clienteContas.length === 1 ? "conta" : "contas"}
-            </span>
+          <div className="detail-kpi">
+            <div className="detail-kpi__icon detail-kpi__icon--green" aria-hidden="true">
+              <Wallet size={20} />
+            </div>
+            <div className="detail-kpi__content">
+              <dt className="detail-kpi__label">Saldo Total</dt>
+              <dd className={totalSaldoClass}>
+                {formatCurrencyBRL(financialSummary.totalSaldo)}
+              </dd>
+              <span className="detail-kpi__sub tabular-nums">
+                {clienteContas.length === 0
+                  ? "Nenhuma conta vinculada"
+                  : clienteContas.length === 1
+                    ? "Soma de 1 conta"
+                    : `Soma de ${clienteContas.length} contas`}
+              </span>
+            </div>
           </div>
 
-          {clienteContas.length === 0 ? (
-            <div className="client-detail__empty-accounts">
-              <Landmark
-                size={24}
-                className="client-detail__empty-icon"
-                aria-hidden="true"
-              />
-              <p className="client-detail__empty-text">
-                Nenhuma conta bancária vinculada a este cliente.
-              </p>
+          <div className="detail-kpi">
+            <div className="detail-kpi__icon detail-kpi__icon--blue" aria-hidden="true">
+              <CreditCard size={20} />
             </div>
-          ) : (
-            <div className="client-detail__accounts-grid">
-              {clienteContas.map((conta) => (
-                <AccountCard key={conta.id} conta={conta} />
-              ))}
+            <div className="detail-kpi__content">
+              <dt className="detail-kpi__label">Crédito Disponível Total</dt>
+              <dd className="detail-kpi__value tabular-nums">
+                {formatCurrencyBRL(financialSummary.totalCreditoDisponivel)}
+              </dd>
+              <span className="detail-kpi__sub tabular-nums">
+                {financialSummary.totalLimiteCredito > 0
+                  ? `de ${formatCurrencyBRL(financialSummary.totalLimiteCredito)} em limites`
+                  : "Sem limite contratado"}
+              </span>
             </div>
-          )}
-        </section>
+          </div>
+
+          <div className="detail-kpi">
+            <div className="detail-kpi__icon detail-kpi__icon--green" aria-hidden="true">
+              <Briefcase size={20} />
+            </div>
+            <div className="detail-kpi__content">
+              <dt className="detail-kpi__label">Patrimônio Declarado</dt>
+              <dd className="detail-kpi__value tabular-nums">
+                {formatCurrencyBRL(cliente.patrimonio)}
+              </dd>
+              <span className="detail-kpi__sub tabular-nums">
+                Renda anual: {formatCurrencyBRL(cliente.rendaAnual)}
+              </span>
+            </div>
+          </div>
+        </dl>
+
+        <div className="detail-tabs">
+          <div
+            className="detail-tabs__list"
+            role="tablist"
+            aria-label="Seções do perfil do cliente"
+          >
+            {DETAIL_TABS.map((tab, index) => {
+              const isSelected = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  ref={(node) => {
+                    tabRefs.current[tab.id] = node;
+                  }}
+                  id={`detail-tab-${tab.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  tabIndex={isSelected ? 0 : -1}
+                  className="detail-tabs__tab"
+                  onClick={() => activateTab(tab.id, false)}
+                  onKeyDown={(event) => handleTabKeyDown(event, index)}
+                >
+                  {tab.id === "overview" ? (
+                    <LayoutGrid size={16} aria-hidden="true" />
+                  ) : tab.id === "accounts" ? (
+                    <Landmark size={16} aria-hidden="true" />
+                  ) : (
+                    <User size={16} aria-hidden="true" />
+                  )}
+                  <span>{tab.label}</span>
+                  {tab.id === "accounts" ? (
+                    <span className="detail-tabs__badge tabular-nums">
+                      {clienteContas.length}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          <div
+            key={activeTab}
+            role="tabpanel"
+            aria-labelledby={`detail-tab-${activeTab}`}
+            className="detail-tabs__panel"
+          >
+            {activeTab === "overview" ? (
+              <div className="detail-tabs__panel-stack">{overviewSection}</div>
+            ) : activeTab === "accounts" ? (
+              <div className="detail-tabs__panel-stack">{accountsSection}</div>
+            ) : (
+              <div className="detail-tabs__panel-stack">
+                {profileAndAgencySection}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      <AccountDrawer
+        isOpen={activeAccountId !== null}
+        contas={clienteContas}
+        activeAccountId={activeAccountId}
+        clientName={cliente.nome}
+        agenciaLabel={agenciaLabel}
+        onSelectAccount={(accountId) => setSelectedAccountId(accountId)}
+        onClose={() => setSelectedAccountId(null)}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Building2, Search, X } from "lucide-react";
+import { Building2, IdCard, Search, X } from "lucide-react";
+import type { DocumentTypeFilter } from "../../hooks/useClientFilters";
 import type { Agencia } from "../../types/models";
 import {
   SelectDropdown,
@@ -10,6 +11,8 @@ import "./SearchToolbar.css";
 interface SearchToolbarProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
+  documentType: DocumentTypeFilter;
+  onDocumentTypeChange: (value: DocumentTypeFilter) => void;
   selectedAgencia: string;
   onAgenciaChange: (value: string) => void;
   agencias: Agencia[];
@@ -17,13 +20,29 @@ interface SearchToolbarProps {
   onClearFilters: () => void;
 }
 
+const DOCUMENT_TYPE_OPTIONS: SelectOption[] = [
+  { value: "all", label: "Ambos (CPF e CNPJ)" },
+  { value: "cpf", label: "Somente CPF" },
+  { value: "cnpj", label: "Somente CNPJ" },
+];
+
+function parseDocumentType(value: string): DocumentTypeFilter {
+  if (value === "cpf" || value === "cnpj") {
+    return value;
+  }
+  return "all";
+}
+
 /**
- * Barra de consulta e filtro por agência com labels explícitos e dropdown customizado.
+ * Barra de consulta e filtros (tipo de documento CPF/CNPJ e agência)
+ * com labels explícitos e dropdowns customizados.
  * O botão principal "Novo Cliente" fica centralizado no Header institucional.
  */
 export function SearchToolbar({
   searchQuery,
   onSearchChange,
+  documentType,
+  onDocumentTypeChange,
   selectedAgencia,
   onAgenciaChange,
   agencias,
@@ -74,6 +93,23 @@ export function SearchToolbar({
               </button>
             ) : null}
           </div>
+        </div>
+
+        <div className="search-toolbar__field search-toolbar__field--document">
+          <label htmlFor="document-filter" className="search-toolbar__label">
+            Documento
+          </label>
+          <SelectDropdown
+            id="document-filter"
+            value={documentType}
+            onChange={(nextValue) =>
+              onDocumentTypeChange(parseDocumentType(nextValue))
+            }
+            options={DOCUMENT_TYPE_OPTIONS}
+            placeholder="Todos (CPF e CNPJ)"
+            leadingIcon={<IdCard size={17} />}
+            listboxLabel="Filtrar por tipo de documento"
+          />
         </div>
 
         <div className="search-toolbar__field search-toolbar__field--agency">

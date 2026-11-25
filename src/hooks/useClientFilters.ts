@@ -4,9 +4,12 @@ import { onlyDigits, stripAccents } from "../utils/normalizers";
 
 export const PAGE_SIZE = 10;
 
+export type DocumentTypeFilter = "all" | "cpf" | "cnpj";
+
 export interface ClientFiltersResult {
   searchQuery: string;
   selectedAgencia: string;
+  documentType: DocumentTypeFilter;
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -17,6 +20,7 @@ export interface ClientFiltersResult {
   paginatedClientes: Cliente[];
   setSearchQuery: (value: string) => void;
   setSelectedAgencia: (value: string) => void;
+  setDocumentType: (value: DocumentTypeFilter) => void;
   setCurrentPage: (page: number) => void;
   clearFilters: () => void;
 }
@@ -54,13 +58,16 @@ function matchesSearchQuery(
 }
 
 /**
- * Gerencia busca textual/documento, filtro de agência e paginação de até 10 itens por página.
+ * Gerencia busca textual/documento, filtro de tipo de documento (CPF/CNPJ),
+ * filtro de agência e paginação de até 10 itens por página.
  * Qualquer mudança nos critérios de busca ou filtro reinicia a página atual para 1,
  * evitando páginas vazias após refinar a consulta.
  */
 export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
   const [searchQuery, setSearchQueryState] = useState<string>("");
   const [selectedAgencia, setSelectedAgenciaState] = useState<string>("");
+  const [documentType, setDocumentTypeState] =
+    useState<DocumentTypeFilter>("all");
   const [currentPage, setCurrentPageState] = useState<number>(1);
 
   const setSearchQuery = useCallback((value: string) => {
@@ -73,9 +80,15 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     setCurrentPageState(1);
   }, []);
 
+  const setDocumentType = useCallback((value: DocumentTypeFilter) => {
+    setDocumentTypeState(value);
+    setCurrentPageState(1);
+  }, []);
+
   const clearFilters = useCallback(() => {
     setSearchQueryState("");
     setSelectedAgenciaState("");
+    setDocumentTypeState("all");
     setCurrentPageState(1);
   }, []);
 
@@ -92,9 +105,18 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
       if (agencyCode !== null && cliente.codigoAgencia !== agencyCode) {
         return false;
       }
+      if (documentType !== "all") {
+        const docDigitsLength = onlyDigits(cliente.cpfCnpj).length;
+        if (documentType === "cpf" && docDigitsLength !== 11) {
+          return false;
+        }
+        if (documentType === "cnpj" && docDigitsLength !== 14) {
+          return false;
+        }
+      }
       return matchesSearchQuery(cliente, normalizedTextQuery, digitQuery);
     });
-  }, [clientes, searchQuery, selectedAgencia]);
+  }, [clientes, searchQuery, selectedAgencia, documentType]);
 
   const totalItems = filteredClientes.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
@@ -117,11 +139,14 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
   const endItem =
     totalItems === 0 ? 0 : Math.min(safePage * PAGE_SIZE, totalItems);
   const hasActiveFilters =
-    searchQuery.trim().length > 0 || selectedAgencia.trim().length > 0;
+    searchQuery.trim().length > 0 ||
+    selectedAgencia.trim().length > 0 ||
+    documentType !== "all";
 
   return {
     searchQuery,
     selectedAgencia,
+    documentType,
     currentPage: safePage,
     totalPages,
     totalItems,
@@ -132,6 +157,7 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     paginatedClientes,
     setSearchQuery,
     setSelectedAgencia,
+    setDocumentType,
     setCurrentPage,
     clearFilters,
   };

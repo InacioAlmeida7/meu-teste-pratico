@@ -1,17 +1,24 @@
-import { CreditCard, PiggyBank, Wallet } from "lucide-react";
+import { ChevronRight, CreditCard, PiggyBank, Wallet } from "lucide-react";
 import type { Conta } from "../../types/models";
 import { formatCurrencyBRL } from "../../utils/formatters";
 import "./AccountCard.css";
 
 interface AccountCardProps {
   conta: Conta;
+  isSelected?: boolean;
+  onSelect?: (conta: Conta) => void;
 }
 
 /**
- * Cartão financeiro da conta bancária (corrente ou poupança), com alinhamento
- * tabular nos valores monetários, ícones institucionais e barra visual de crédito em CSS puro.
+ * Cartão financeiro interativo da conta bancária (corrente ou poupança).
+ * Mantém visíveis tipo, ID, saldo, limite, crédito disponível e barra animada,
+ * com gatilho nativo estendido para abrir o Drawer de detalhamento completo.
  */
-export function AccountCard({ conta }: AccountCardProps) {
+export function AccountCard({
+  conta,
+  isSelected = false,
+  onSelect,
+}: AccountCardProps) {
   const isCorrente = conta.tipo === "corrente";
   const hasLimit = conta.limiteCredito > 0;
   const usedCredit = hasLimit
@@ -32,8 +39,16 @@ export function AccountCard({ conta }: AccountCardProps) {
         ? "account-card__balance-value account-card__balance-value--negative tabular-nums"
         : "account-card__balance-value tabular-nums";
 
+  const cardClass = [
+    "account-card",
+    onSelect ? "account-card--interactive" : "",
+    isSelected ? "account-card--selected" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <article className="account-card">
+    <article className={cardClass}>
       <header className="account-card__header">
         <div className="account-card__type-group">
           {isCorrente ? (
@@ -64,7 +79,11 @@ export function AccountCard({ conta }: AccountCardProps) {
 
       <div className="account-card__balance">
         <span className="account-card__balance-label">
-          <Wallet size={13} className="account-card__inline-icon" aria-hidden="true" />
+          <Wallet
+            size={13}
+            className="account-card__inline-icon"
+            aria-hidden="true"
+          />
           <span>Saldo atual</span>
         </span>
         <strong className={balanceClass}>
@@ -130,6 +149,28 @@ export function AccountCard({ conta }: AccountCardProps) {
           Sem limite de crédito contratado
         </p>
       )}
+
+      {onSelect ? (
+        <div className="account-card__footer">
+          <button
+            type="button"
+            className="account-card__action-btn"
+            aria-expanded={isSelected}
+            onClick={() => onSelect(conta)}
+          >
+            <span>Ver detalhamento</span>
+            <span className="sr-only">
+              {" "}
+              da {isCorrente ? "Conta Corrente" : "Conta Poupança"} {conta.id}
+            </span>
+            <ChevronRight
+              size={16}
+              className="account-card__action-icon"
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }

@@ -1,7 +1,10 @@
 .account-card {
-  display: grid;
+  position: relative;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
-  align-content: start;
+  block-size: 100%;
   padding: var(--space-5);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
@@ -18,9 +21,18 @@
   box-shadow: var(--shadow-card-hover);
 }
 
+.account-card--interactive {
+  cursor: pointer;
+}
+
+.account-card--selected {
+  border-color: var(--color-brand-primary);
+  box-shadow: 0 0 0 2px rgba(8, 20, 221, 0.14), var(--shadow-card-hover);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .account-card:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
 }
 
@@ -108,16 +120,31 @@
 
 .account-card__metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
   padding-block: var(--space-3);
   border-top: 1px solid var(--color-border-divider);
   border-bottom: 1px solid var(--color-border-divider);
 }
 
 .account-card__metric {
-  display: grid;
-  gap: var(--space-1);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+@container (min-width: 25rem) {
+  .account-card__metrics {
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    gap: var(--space-3);
+  }
+
+  .account-card__metric {
+    display: grid;
+    gap: var(--space-1);
+    justify-content: initial;
+  }
 }
 
 .account-card__metric-label {
@@ -163,12 +190,27 @@
   overflow: hidden;
 }
 
-/* Barra estritamente gráfica: utiliza #428726 (--color-accent-green-graphic) */
+@keyframes account-bar-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .account-card__progress-fill {
   block-size: 100%;
   border-radius: var(--radius-full);
-  background-color: var(--color-accent-green-graphic);
+  background-color: var(--color-accent-green-bright);
+  transform-origin: left center;
   transition: width var(--transition-base);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .account-card__progress-fill {
+    animation: account-bar-fill 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 }
 
 .account-card__progress-fill--low {
@@ -178,4 +220,44 @@
 .account-card__no-limit {
   color: var(--color-text-secondary);
   font-size: var(--text-xs);
+}
+
+/* Botão nativo estendido para tornar o card inteiro clicável sem violar HTML5 */
+.account-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-block-start: auto;
+  padding-block-start: var(--space-2);
+  border-top: 1px dashed var(--color-border-divider);
+}
+
+.account-card__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-brand-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.account-card__action-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+
+.account-card__action-icon {
+  transition: transform var(--transition-fast);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .account-card:hover .account-card__action-icon {
+    transform: translateX(3px);
+  }
 }
