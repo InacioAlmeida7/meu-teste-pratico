@@ -1,10 +1,8 @@
 import { useMemo } from "react";
 import { ArrowUpDown, Building2, IdCard, Search, X } from "lucide-react";
-import {
-  describeSort,
-  type DocumentTypeFilter,
-  type SortKey,
-  type SortState,
+import type {
+  DocumentTypeFilter,
+  SortDirection,
 } from "../../hooks/useClientFilters";
 import type { Agencia } from "../../types/models";
 import {
@@ -21,8 +19,8 @@ interface SearchToolbarProps {
   selectedAgencia: string;
   onAgenciaChange: (value: string) => void;
   agencias: Agencia[];
-  sort: SortState;
-  onSortChange: (value: SortState) => void;
+  sortDirection: SortDirection;
+  onSortDirectionChange: (value: SortDirection) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
 }
@@ -40,21 +38,11 @@ function parseDocumentType(value: string): DocumentTypeFilter {
   return "all";
 }
 
-const SORT_KEYS: SortKey[] = ["nome", "cpfCnpj", "email", "agencia"];
-
 // No mobile o cabeçalho da tabela fica oculto (cards); este select oferece a mesma ordenação.
-const SORT_OPTIONS: SelectOption[] = SORT_KEYS.flatMap((key) =>
-  (["asc", "desc"] as const).map((direction) => ({
-    value: `${key}:${direction}`,
-    label: describeSort({ key, direction }),
-  })),
-);
-
-function parseSort(value: string): SortState {
-  const [key, direction] = value.split(":");
-  const sortKey = SORT_KEYS.find((candidate) => candidate === key) ?? "nome";
-  return { key: sortKey, direction: direction === "desc" ? "desc" : "asc" };
-}
+const SORT_OPTIONS: SelectOption[] = [
+  { value: "asc", label: "Nome (A–Z)" },
+  { value: "desc", label: "Nome (Z–A)" },
+];
 
 /**
  * Barra de consulta e filtros (tipo de documento CPF/CNPJ e agência)
@@ -69,8 +57,8 @@ export function SearchToolbar({
   selectedAgencia,
   onAgenciaChange,
   agencias,
-  sort,
-  onSortChange,
+  sortDirection,
+  onSortDirectionChange,
   hasActiveFilters,
   onClearFilters,
 }: SearchToolbarProps) {
@@ -158,8 +146,10 @@ export function SearchToolbar({
           </label>
           <SelectDropdown
             id="sort-select"
-            value={`${sort.key}:${sort.direction}`}
-            onChange={(nextValue) => onSortChange(parseSort(nextValue))}
+            value={sortDirection}
+            onChange={(nextValue) =>
+              onSortDirectionChange(nextValue === "desc" ? "desc" : "asc")
+            }
             options={SORT_OPTIONS}
             placeholder="Nome (A–Z)"
             leadingIcon={<ArrowUpDown size={17} />}

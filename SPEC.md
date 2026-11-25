@@ -146,7 +146,7 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Campo de busca único com `<label>` acessível: filtra em tempo real por **Nome**, **Nome Social** ou **CPF/CNPJ** (com ou sem pontuação, ignorando acentos e maiúsculas/minúsculas).
    * Filtro complementar por **Agência** (dropdown preenchido dinamicamente a partir das agências carregadas, com opção "Todas as agências").
    * Botão "Limpar filtros" exibido quando há busca ou filtro ativo.
-   * **Ordenação:** cabeçalhos **Nome**, **CPF/CNPJ**, **E-mail** e **Agência** são botões que alternam crescente/decrescente (`aria-sort` na coluna ativa). Padrão: Nome em ordem alfabética pt-BR (sem diferenciar acentos). No mobile, onde o cabeçalho fica oculto, um campo "Ordenar por" oferece as mesmas opções.
+   * **Ordenação por nome:** o cabeçalho **Nome** é um botão que alterna A–Z / Z–A (`aria-sort`). Padrão: A–Z, ordem alfabética pt-BR sem diferenciar acentos. No mobile, onde o cabeçalho fica oculto, um campo "Ordenar por" oferece as mesmas duas opções.
    * **Regra obrigatória:** Qualquer alteração na busca, filtro ou ordenação deve resetar automaticamente a página atual para **1**.
 3. **Listagem Responsiva (`ClientList`):**
    * Exibir apenas os dados principais: **Nome** (com indicador discreto de Nome Social se houver), **CPF/CNPJ formatado**, **E-mail**, **Agência** (código/nome) e botão/ação **"Ver detalhes"**.

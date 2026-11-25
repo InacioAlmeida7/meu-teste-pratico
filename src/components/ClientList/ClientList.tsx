@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  ArrowUpDown,
   Building2,
   ChevronRight,
   Mail,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { SortKey, SortState } from "../../hooks/useClientFilters";
+import type { SortDirection } from "../../hooks/useClientFilters";
 import type { Agencia, Cliente } from "../../types/models";
 import { formatCpfCnpj } from "../../utils/formatters";
 import { onlyDigits } from "../../utils/normalizers";
@@ -17,30 +16,24 @@ import "./ClientList.css";
 interface ClientListProps {
   clientes: Cliente[];
   agenciaMap: Map<number, Agencia>;
-  sort: SortState;
-  onSortChange: (sort: SortState) => void;
+  sortDirection: SortDirection;
+  onSortDirectionChange: (direction: SortDirection) => void;
 }
-
-const SORTABLE_COLUMNS: { key: SortKey; label: string }[] = [
-  { key: "nome", label: "Nome" },
-  { key: "cpfCnpj", label: "CPF / CNPJ" },
-  { key: "email", label: "E-mail" },
-  { key: "agencia", label: "Agência" },
-];
 
 /**
  * Listagem responsiva de clientes com tabela semântica única:
  * no desktop (>= 768px) exibe tabela tabular com destaque visual de tipo PF/PJ e hover fluido;
  * no mobile (< 768px) transforma as linhas em cards empilhados com rótulos CSS.
- * Os cabeçalhos ordenáveis são botões: o primeiro clique ordena de forma crescente
- * e o seguinte inverte; `aria-sort` marca só a coluna ativa.
+ * O cabeçalho "Nome" é um botão que alterna a ordem A–Z / Z–A (`aria-sort`).
  */
 export function ClientList({
   clientes,
   agenciaMap,
-  sort,
-  onSortChange,
+  sortDirection,
+  onSortDirectionChange,
 }: ClientListProps) {
+  const SortIcon = sortDirection === "asc" ? ArrowUp : ArrowDown;
+
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = useState(false);
 
@@ -77,46 +70,26 @@ export function ClientList({
         </caption>
         <thead>
           <tr>
-            {SORTABLE_COLUMNS.map(({ key, label }) => {
-              const isActive = sort.key === key;
-              const SortIcon = !isActive
-                ? ArrowUpDown
-                : sort.direction === "asc"
-                  ? ArrowUp
-                  : ArrowDown;
-              return (
-                <th
-                  key={key}
-                  scope="col"
-                  aria-sort={
-                    isActive
-                      ? sort.direction === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : undefined
-                  }
-                >
-                  <button
-                    type="button"
-                    className={
-                      isActive
-                        ? "client-list__sort-btn client-list__sort-btn--active"
-                        : "client-list__sort-btn"
-                    }
-                    onClick={() =>
-                      onSortChange({
-                        key,
-                        direction:
-                          isActive && sort.direction === "asc" ? "desc" : "asc",
-                      })
-                    }
-                  >
-                    <span>{label}</span>
-                    <SortIcon size={14} aria-hidden="true" />
-                  </button>
-                </th>
-              );
-            })}
+            <th
+              scope="col"
+              aria-sort={sortDirection === "asc" ? "ascending" : "descending"}
+            >
+              <button
+                type="button"
+                className="client-list__sort-btn"
+                onClick={() =>
+                  onSortDirectionChange(
+                    sortDirection === "asc" ? "desc" : "asc",
+                  )
+                }
+              >
+                <span>Nome</span>
+                <SortIcon size={14} aria-hidden="true" />
+              </button>
+            </th>
+            <th scope="col">CPF / CNPJ</th>
+            <th scope="col">E-mail</th>
+            <th scope="col">Agência</th>
             <th scope="col" className="client-list__actions-heading">
               Ações
             </th>

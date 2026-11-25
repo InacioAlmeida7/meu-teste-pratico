@@ -36,7 +36,7 @@
   text-align: right;
 }
 
-/* Botão de ordenação herda a tipografia do cabeçalho; ocupa a célula inteira para facilitar o clique. */
+/* Botão de ordenação herda a tipografia do cabeçalho. */
 .client-list__sort-btn {
   display: inline-flex;
   align-items: center;
@@ -55,15 +55,10 @@
 
 .client-list__sort-btn svg {
   flex-shrink: 0;
-  opacity: 0.55;
 }
 
 .client-list__sort-btn:hover {
   background-color: var(--color-bg-subtle);
-}
-
-.client-list__sort-btn--active svg {
-  opacity: 1;
 }
 
 .client-list__row th,

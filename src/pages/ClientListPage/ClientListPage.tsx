@@ -5,14 +5,14 @@ import { Pagination } from "../../components/Pagination/Pagination";
 import { SearchToolbar } from "../../components/SearchToolbar/SearchToolbar";
 import { StatusMessage } from "../../components/StatusMessage/StatusMessage";
 import { useBankData } from "../../context/useBankData";
-import { describeSort, useClientFilters } from "../../hooks/useClientFilters";
+import { useClientFilters } from "../../hooks/useClientFilters";
 import type { Agencia } from "../../types/models";
 import "./ClientListPage.css";
 
 /**
  * Página inicial (`/`) de consulta e gerenciamento da carteira de clientes.
  * Apresenta faixa institucional Banestes com métricas integradas, busca/filtro
- * por agência, ordenação por coluna, listagem responsiva e paginação.
+ * por agência, ordenação por nome, listagem responsiva e paginação.
  */
 export function ClientListPage() {
   const { clientes, contas, agencias, isLoading, error, reload } =
@@ -22,7 +22,7 @@ export function ClientListPage() {
     searchQuery,
     selectedAgencia,
     documentType,
-    sort,
+    sortDirection,
     currentPage,
     totalPages,
     totalItems,
@@ -33,7 +33,7 @@ export function ClientListPage() {
     setSearchQuery,
     setSelectedAgencia,
     setDocumentType,
-    setSort,
+    setSortDirection,
     setCurrentPage,
     clearFilters,
   } = useClientFilters(clientes);
@@ -133,8 +133,8 @@ export function ClientListPage() {
               selectedAgencia={selectedAgencia}
               onAgenciaChange={setSelectedAgencia}
               agencias={agencias}
-              sort={sort}
-              onSortChange={setSort}
+              sortDirection={sortDirection}
+              onSortDirectionChange={setSortDirection}
               hasActiveFilters={hasActiveFilters}
               onClearFilters={clearFilters}
             />
@@ -144,7 +144,7 @@ export function ClientListPage() {
               {totalItems === 1
                 ? "1 cliente encontrado"
                 : `${totalItems} clientes encontrados`}
-              , ordenados por {describeSort(sort)}.
+              , ordenados por nome ({sortDirection === "asc" ? "A–Z" : "Z–A"}).
             </p>
 
             {totalItems === 0 ? (
@@ -164,8 +164,8 @@ export function ClientListPage() {
                 <ClientList
                   clientes={paginatedClientes}
                   agenciaMap={agenciaMap}
-                  sort={sort}
-                  onSortChange={setSort}
+                  sortDirection={sortDirection}
+                  onSortDirectionChange={setSortDirection}
                 />
                 <Pagination
                   currentPage={currentPage}
