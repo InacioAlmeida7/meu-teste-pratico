@@ -2,7 +2,7 @@
 
 Aplicação React + TypeScript para consultar, filtrar, detalhar e cadastrar (em memória) clientes, contas e agências lidos **ao vivo** de planilhas públicas do Google Sheets.
 
-> 🔗 **Deploy:** o link será adicionado após a publicação na Vercel.
+> 🌐 **Acesse online:** **[meu-teste-pratico.vercel.app](https://meu-teste-pratico.vercel.app)**
 
 ---
 
@@ -58,8 +58,11 @@ Os dados são lidos em tempo de execução com `fetch` + `Response.text()` (sem 
 
 Requer **Node.js 20+**.
 
+⚡ **Atalho:** `npm start` instala as dependências (só se ainda não estiverem instaladas ou estiverem desatualizadas), gera o build e abre o preview local.
+
 | Comando | Para quê |
 | --- | --- |
+| `npm start` | Instalar (se preciso), buildar e rodar |
 | `npm install` | Instalar dependências |
 | `npm run dev` | Servidor de desenvolvimento |
 | `npx tsc --noEmit -p tsconfig.app.json` | Checar tipos |
