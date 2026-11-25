@@ -18,24 +18,33 @@ function getVisiblePages(
   currentPage: number,
   totalPages: number,
 ): Array<number | "ellipsis-start" | "ellipsis-end"> {
-  if (totalPages <= 7) {
+  if (totalPages <= 5) {
     return Array.from({ length: totalPages }, (_, index) => index + 1);
   }
 
   const pages: Array<number | "ellipsis-start" | "ellipsis-end"> = [1];
 
-  if (currentPage > 3) {
-    pages.push("ellipsis-start");
+  // Garante sempre uma janela de ao menos 3 páginas nas extremidades (1 2 3 ... N e 1 ... N-2 N-1 N)
+  let windowStart = Math.max(2, currentPage - 1);
+  let windowEnd = Math.min(totalPages - 1, currentPage + 1);
+
+  if (currentPage <= 2) {
+    windowStart = 2;
+    windowEnd = Math.min(totalPages - 1, 3);
+  } else if (currentPage >= totalPages - 1) {
+    windowStart = Math.max(2, totalPages - 2);
+    windowEnd = totalPages - 1;
   }
 
-  const windowStart = Math.max(2, currentPage - 1);
-  const windowEnd = Math.min(totalPages - 1, currentPage + 1);
+  if (windowStart > 2) {
+    pages.push("ellipsis-start");
+  }
 
   for (let page = windowStart; page <= windowEnd; page += 1) {
     pages.push(page);
   }
 
-  if (currentPage < totalPages - 2) {
+  if (windowEnd < totalPages - 1) {
     pages.push("ellipsis-end");
   }
 
