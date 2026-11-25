@@ -6,10 +6,61 @@ export const PAGE_SIZE = 10;
 
 export type DocumentTypeFilter = "all" | "cpf" | "cnpj";
 
+export type SortKey = "nome" | "cpfCnpj" | "email" | "agencia";
+
+export interface SortState {
+  key: SortKey;
+  direction: "asc" | "desc";
+}
+
+/** A listagem sempre começa em ordem alfabética de nome. */
+export const DEFAULT_SORT: SortState = { key: "nome", direction: "asc" };
+
+const SORT_LABELS: Record<SortKey, string> = {
+  nome: "Nome",
+  cpfCnpj: "CPF/CNPJ",
+  email: "E-mail",
+  agencia: "Agência",
+};
+
+/** Texto legível da ordenação, ex.: "Nome (A–Z)" ou "Agência (decrescente)". */
+export function describeSort({ key, direction }: SortState): string {
+  const isText = key === "nome" || key === "email";
+  const order = isText
+    ? direction === "asc"
+      ? "A–Z"
+      : "Z–A"
+    : direction === "asc"
+      ? "crescente"
+      : "decrescente";
+  return `${SORT_LABELS[key]} (${order})`;
+}
+
+// Ordem alfabética pt-BR ignorando acentos e caixa ("Álvaro" junto de "Alvaro");
+// `numeric` compara sequências de dígitos (CPF/CNPJ) pelo valor.
+const collator = new Intl.Collator("pt-BR", {
+  sensitivity: "base",
+  numeric: true,
+});
+
+function compareClientes(a: Cliente, b: Cliente, key: SortKey): number {
+  switch (key) {
+    case "cpfCnpj":
+      return collator.compare(onlyDigits(a.cpfCnpj), onlyDigits(b.cpfCnpj));
+    case "email":
+      return collator.compare(a.email, b.email);
+    case "agencia":
+      return a.codigoAgencia - b.codigoAgencia;
+    case "nome":
+      return collator.compare(a.nome, b.nome);
+  }
+}
+
 export interface ClientFiltersResult {
   searchQuery: string;
   selectedAgencia: string;
   documentType: DocumentTypeFilter;
+  sort: SortState;
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -20,6 +71,7 @@ export interface ClientFiltersResult {
   setSearchQuery: (value: string) => void;
   setSelectedAgencia: (value: string) => void;
   setDocumentType: (value: DocumentTypeFilter) => void;
+  setSort: (value: SortState) => void;
   setCurrentPage: (page: number) => void;
   clearFilters: () => void;
 }
@@ -58,16 +110,17 @@ function matchesSearchQuery(
 
 /**
  * Gerencia busca textual/documento, filtro de tipo de documento (CPF/CNPJ),
- * filtro de agência e paginação de até 10 itens por página.
- * Qualquer mudança nos critérios de busca ou filtro reinicia a página atual para 1,
+ * filtro de agência, ordenação por coluna e paginação de até 10 itens por página.
+ * Qualquer mudança nos critérios de busca, filtro ou ordenação reinicia a página para 1,
  * evitando páginas vazias após refinar a consulta. Quando a base cresce (novo cadastro),
- * os filtros também são limpos para o cliente recém-criado aparecer no topo da página 1.
+ * os filtros também são limpos para o cliente recém-criado não ficar oculto.
  */
 export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
   const [searchQuery, setSearchQueryState] = useState<string>("");
   const [selectedAgencia, setSelectedAgenciaState] = useState<string>("");
   const [documentType, setDocumentTypeState] =
     useState<DocumentTypeFilter>("all");
+  const [sort, setSortState] = useState<SortState>(DEFAULT_SORT);
   const [currentPage, setCurrentPageState] = useState<number>(1);
   const [knownCount, setKnownCount] = useState<number>(clientes.length);
 
@@ -94,6 +147,11 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
 
   const setDocumentType = useCallback((value: DocumentTypeFilter) => {
     setDocumentTypeState(value);
+    setCurrentPageState(1);
+  }, []);
+
+  const setSort = useCallback((value: SortState) => {
+    setSortState(value);
     setCurrentPageState(1);
   }, []);
 
@@ -130,6 +188,16 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     });
   }, [clientes, searchQuery, selectedAgencia, documentType]);
 
+  const sortedClientes = useMemo(() => {
+    const factor = sort.direction === "asc" ? 1 : -1;
+    // Empates (ex.: mesma agência) seguem em ordem alfabética de nome.
+    return [...filteredClientes].sort(
+      (a, b) =>
+        factor * compareClientes(a, b, sort.key) ||
+        compareClientes(a, b, "nome"),
+    );
+  }, [filteredClientes, sort]);
+
   const totalItems = filteredClientes.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
@@ -144,8 +212,8 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
 
   const paginatedClientes = useMemo(() => {
     const startIndex = (safePage - 1) * PAGE_SIZE;
-    return filteredClientes.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredClientes, safePage]);
+    return sortedClientes.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [sortedClientes, safePage]);
 
   const startItem = totalItems === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const endItem =
@@ -159,6 +227,7 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     searchQuery,
     selectedAgencia,
     documentType,
+    sort,
     currentPage: safePage,
     totalPages,
     totalItems,
@@ -169,6 +238,7 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     setSearchQuery,
     setSelectedAgencia,
     setDocumentType,
+    setSort,
     setCurrentPage,
     clearFilters,
   };

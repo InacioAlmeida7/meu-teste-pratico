@@ -109,9 +109,11 @@
   --shadow-card: 0 2px 8px rgba(17, 24, 39, 0.05);
   --shadow-card-hover: 0 6px 18px rgba(8, 20, 221, 0.08);
   --shadow-header: 0 2px 12px rgba(17, 24, 39, 0.07);
+  --shadow-toast: 0 8px 24px rgba(17, 24, 39, 0.16);
 
   /* Movimento e Camadas */
   --transition-fast: 150ms ease;
   --transition-base: 260ms cubic-bezier(0.4, 0, 0.2, 1);
   --z-header: 100;
+  --z-toast: 200;
 }

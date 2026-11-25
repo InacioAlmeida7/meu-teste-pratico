@@ -94,23 +94,20 @@ function getInitials(name: string): string {
 }
 
 /**
- * Define o arranjo da grade de contas para evitar espaços vazios no canto inferior:
- * - 2 ou múltiplos pares (4, 6...): 2 colunas no desktop.
- * - 3 ou múltiplos de 3 (3, 6...): 3 colunas alinhadas horizontalmente no desktop.
- * - 1 ou ímpares maiores (5, 7...): lista em coluna única limpa.
+ * Arranjo das contas na aba "Contas Bancárias":
+ * - 1 a 3 contas: cards lado a lado (3 colunas no desktop largo).
+ * - 4 contas: grade 2×2.
+ * - 5 ou mais: lista compacta (a mesma do Resumo), pois muitos cards ficariam extensos.
  */
 function getAccountsGridClass(count: number): string {
-  if (count <= 1) {
-    return "client-detail__accounts-grid client-detail__accounts-grid--single";
+  const base = "client-detail__accounts-grid";
+  if (count === 1) {
+    return base;
   }
-  if (count === 3 || (count > 3 && count % 3 === 0)) {
-    return "client-detail__accounts-grid client-detail__accounts-grid--three";
-  }
-  if (count % 2 === 0) {
-    return "client-detail__accounts-grid client-detail__accounts-grid--two";
-  }
-  return "client-detail__accounts-grid client-detail__accounts-grid--stack";
+  return count === 3 ? `${base} ${base}--three` : `${base} ${base}--two`;
 }
+
+const ACCOUNTS_LIST_THRESHOLD = 5;
 
 /**
  * Página de detalhes interativa do cliente (`/clientes/:id`).
@@ -326,6 +323,93 @@ export function ClientDetailPage() {
     </div>
   );
 
+  // Lista compacta de contas: usada no Resumo e na aba Contas quando há 5 ou mais.
+  const accountsList = (
+    <ul className="detail-overview__accounts-list">
+      {clienteContas.map((conta) => {
+        const isCorrente = conta.tipo === "corrente";
+        const hasLimit = conta.limiteCredito > 0;
+        const isSelected = activeAccountId === conta.id;
+        const rowBalanceClass =
+          conta.saldo > 0
+            ? "detail-overview__account-balance detail-overview__account-balance--positive tabular-nums"
+            : conta.saldo < 0
+              ? "detail-overview__account-balance detail-overview__account-balance--negative tabular-nums"
+              : "detail-overview__account-balance tabular-nums";
+
+        return (
+          <li
+            key={conta.id}
+            className={
+              isSelected
+                ? "detail-overview__account-row detail-overview__account-row--selected"
+                : "detail-overview__account-row"
+            }
+          >
+            <div className="detail-overview__account-main">
+              <span
+                className={
+                  isCorrente
+                    ? "detail-overview__account-type detail-overview__account-type--corrente"
+                    : "detail-overview__account-type detail-overview__account-type--poupanca"
+                }
+              >
+                {isCorrente ? (
+                  <CreditCard size={14} aria-hidden="true" />
+                ) : (
+                  <PiggyBank size={14} aria-hidden="true" />
+                )}
+                <span>
+                  {isCorrente ? "Conta Corrente" : "Conta Poupança"}
+                </span>
+              </span>
+              <span className="detail-overview__account-id tabular-nums">
+                {conta.id}
+              </span>
+            </div>
+
+            <div className="detail-overview__account-figures">
+              <div className="detail-overview__account-metric">
+                <span className="detail-overview__account-metric-label">
+                  Saldo
+                </span>
+                <strong className={rowBalanceClass}>
+                  {formatCurrencyBRL(conta.saldo)}
+                </strong>
+              </div>
+
+              <div className="detail-overview__account-metric">
+                <span className="detail-overview__account-metric-label">
+                  Crédito disponível
+                </span>
+                <span className="detail-overview__account-credit tabular-nums">
+                  {hasLimit
+                    ? `${formatCurrencyBRL(conta.creditoDisponivel)} / ${formatCurrencyBRL(conta.limiteCredito)}`
+                    : "Sem limite contratado"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="detail-overview__account-btn"
+              aria-haspopup="dialog"
+              onClick={() => setSelectedAccountId(conta.id)}
+            >
+              <span>Detalhar</span>
+              <span className="sr-only">
+                {" "}
+                {isCorrente ? "Conta Corrente" : "Conta Poupança"}{" "}
+                {conta.id}
+              </span>
+              <ChevronRight size={15} aria-hidden="true" />
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   const overviewSection = (
     <>
       <section
@@ -453,93 +537,7 @@ export function ClientDetailPage() {
           </button>
         </div>
 
-        {clienteContas.length === 0 ? (
-          noAccountsMessage
-        ) : (
-          <ul className="detail-overview__accounts-list">
-            {clienteContas.map((conta) => {
-              const isCorrente = conta.tipo === "corrente";
-              const hasLimit = conta.limiteCredito > 0;
-              const isSelected = activeAccountId === conta.id;
-              const rowBalanceClass =
-                conta.saldo > 0
-                  ? "detail-overview__account-balance detail-overview__account-balance--positive tabular-nums"
-                  : conta.saldo < 0
-                    ? "detail-overview__account-balance detail-overview__account-balance--negative tabular-nums"
-                    : "detail-overview__account-balance tabular-nums";
-
-              return (
-                <li
-                  key={conta.id}
-                  className={
-                    isSelected
-                      ? "detail-overview__account-row detail-overview__account-row--selected"
-                      : "detail-overview__account-row"
-                  }
-                >
-                  <div className="detail-overview__account-main">
-                    <span
-                      className={
-                        isCorrente
-                          ? "detail-overview__account-type detail-overview__account-type--corrente"
-                          : "detail-overview__account-type detail-overview__account-type--poupanca"
-                      }
-                    >
-                      {isCorrente ? (
-                        <CreditCard size={14} aria-hidden="true" />
-                      ) : (
-                        <PiggyBank size={14} aria-hidden="true" />
-                      )}
-                      <span>
-                        {isCorrente ? "Conta Corrente" : "Conta Poupança"}
-                      </span>
-                    </span>
-                    <span className="detail-overview__account-id tabular-nums">
-                      {conta.id}
-                    </span>
-                  </div>
-
-                  <div className="detail-overview__account-figures">
-                    <div className="detail-overview__account-metric">
-                      <span className="detail-overview__account-metric-label">
-                        Saldo
-                      </span>
-                      <strong className={rowBalanceClass}>
-                        {formatCurrencyBRL(conta.saldo)}
-                      </strong>
-                    </div>
-
-                    <div className="detail-overview__account-metric">
-                      <span className="detail-overview__account-metric-label">
-                        Crédito disponível
-                      </span>
-                      <span className="detail-overview__account-credit tabular-nums">
-                        {hasLimit
-                          ? `${formatCurrencyBRL(conta.creditoDisponivel)} / ${formatCurrencyBRL(conta.limiteCredito)}`
-                          : "Sem limite contratado"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="detail-overview__account-btn"
-                    aria-haspopup="dialog"
-                    onClick={() => setSelectedAccountId(conta.id)}
-                  >
-                    <span>Detalhar</span>
-                    <span className="sr-only">
-                      {" "}
-                      {isCorrente ? "Conta Corrente" : "Conta Poupança"}{" "}
-                      {conta.id}
-                    </span>
-                    <ChevronRight size={15} aria-hidden="true" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        {clienteContas.length === 0 ? noAccountsMessage : accountsList}
       </section>
     </>
   );
@@ -602,6 +600,8 @@ export function ClientDetailPage() {
 
       {clienteContas.length === 0 ? (
         noAccountsMessage
+      ) : clienteContas.length >= ACCOUNTS_LIST_THRESHOLD ? (
+        accountsList
       ) : (
         <div className={accountsGridClass}>
           {clienteContas.map((conta) => (

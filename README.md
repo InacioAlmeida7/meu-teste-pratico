@@ -10,9 +10,9 @@ Aplicação React + TypeScript para consultar, filtrar, detalhar e cadastrar (em
 
 | Tela | O que faz |
 | --- | --- |
-| **Listagem** (`/`) | Busca por nome, nome social ou CPF/CNPJ (ignora acentos e pontuação) · filtros por tipo de documento e agência · 10 clientes por página · volta à página 1 a cada busca, filtro ou cadastro |
-| **Detalhe** (`/clientes/:id`) | Abas **Resumo**, **Contas Bancárias** e **Cadastro e Agência** · totais de saldo, crédito disponível e patrimônio · painel lateral com os dados de cada conta |
-| **Novo cliente** | Modal com validação (React Hook Form + Zod) · CPF/CNPJ com dígito verificador e sem duplicidade · cliente aparece no topo da lista com aviso de sucesso |
+| **Listagem** (`/`) | Busca por nome, nome social ou CPF/CNPJ (ignora acentos e pontuação) · filtros por tipo de documento e agência · ordenação por Nome, CPF/CNPJ, E-mail ou Agência (padrão: **Nome A–Z**; no celular, pelo campo "Ordenar por") · 10 clientes por página · volta à página 1 a cada busca, filtro, ordenação ou cadastro |
+| **Detalhe** (`/clientes/:id`) | Abas **Resumo**, **Contas Bancárias** e **Cadastro e Agência** · totais de saldo, crédito disponível e patrimônio · contas em cards (1–3 lado a lado, 4 em grade 2×2) ou em lista quando há 5 ou mais · painel lateral com os dados de cada conta |
+| **Novo cliente** | Modal com validação (React Hook Form + Zod) · CPF/CNPJ com dígito verificador e sem duplicidade · aviso no canto inferior direito com link **"Ver cliente"**, que some sozinho em 7 s (pausa com mouse ou foco) |
 | **Estados** | Carregamento, erro com "Tentar novamente" (sem perder os cadastros feitos) e lista vazia |
 
 ---
@@ -39,6 +39,8 @@ Os dados são lidos em tempo de execução com `fetch` + `Response.text()` (sem 
 | Estado civil vazio ou desconhecido | Exibido como **"Não informado"** (nada é inventado) |
 | Linhas incompletas ou IDs repetidos | Descartadas com aviso no console, sem interromper a carga |
 | Documentos fictícios na base | Aceitos na leitura; só o **cadastro** exige CPF/CNPJ válido |
+
+> ⚠️ **Decisão consciente sobre o estado civil:** o enunciado define `estadoCivil` como obrigatório com 4 valores. Optei por desviar desse contrato e torná-lo opcional (`estadoCivil?`) para **não exibir um dado falso** (ex.: "Solteiro") quando a planilha trouxer um valor vazio ou inválido; nesses casos a tela mostra **"Não informado"**. O formulário de cadastro continua exigindo um dos 4 valores.
 
 ---
 

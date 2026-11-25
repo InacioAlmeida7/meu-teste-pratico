@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, X } from "lucide-react";
 import {
+  Link,
   Navigate,
   Route,
   Routes,
@@ -29,6 +30,8 @@ const ClientFormModal = lazy(() =>
   })),
 );
 
+const TOAST_DURATION_MS = 7000;
+
 function AppLayout() {
   const { clientes, agencias, addCliente } = useBankData();
   const navigate = useNavigate();
@@ -36,19 +39,26 @@ function AppLayout() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // Após a primeira abertura o modal permanece montado (o `<dialog>` só é exibido via `showModal`).
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [createdCliente, setCreatedCliente] = useState<Cliente | null>(null);
+  // Enquanto o usuário está com o mouse ou o foco no aviso, o tempo para (WCAG 2.2.1).
+  const [isToastPaused, setIsToastPaused] = useState(false);
 
   useEffect(() => {
-    if (!successToast) {
+    if (!createdCliente || isToastPaused) {
       return;
     }
     const timer = window.setTimeout(() => {
-      setSuccessToast(null);
-    }, 7000);
+      setCreatedCliente(null);
+    }, TOAST_DURATION_MS);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [successToast]);
+  }, [createdCliente, isToastPaused]);
+
+  function closeToast() {
+    setCreatedCliente(null);
+    setIsToastPaused(false);
+  }
 
   const existingDocuments = useMemo(() => {
     const set = new Set<string>();
@@ -60,9 +70,7 @@ function AppLayout() {
 
   function handleCreateClient(novoCliente: Cliente) {
     addCliente(novoCliente);
-    setSuccessToast(
-      "Cliente cadastrado com sucesso (armazenado em memória até o recarregamento da página).",
-    );
+    setCreatedCliente(novoCliente);
 
     if (location.pathname !== "/") {
       void navigate("/");
@@ -82,26 +90,47 @@ function AppLayout() {
         {/* A região `status` fica sempre montada: leitores de tela só anunciam
             mudanças dentro de uma live region que já existia no DOM. */}
         <div role="status">
-          {successToast ? (
-            <div className="container app-toast-wrap">
-              <div className="app-toast">
-                <div className="app-toast__body">
-                  <CheckCircle2
-                    size={18}
-                    className="app-toast__icon"
-                    aria-hidden="true"
-                  />
-                  <p>{successToast}</p>
-                </div>
-                <button
-                  type="button"
-                  className="app-toast__close"
-                  aria-label="Fechar notificação"
-                  onClick={() => setSuccessToast(null)}
+          {createdCliente ? (
+            <div
+              className="app-toast"
+              onMouseEnter={() => setIsToastPaused(true)}
+              onMouseLeave={() => setIsToastPaused(false)}
+              onFocus={() => setIsToastPaused(true)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setIsToastPaused(false);
+                }
+              }}
+            >
+              <CheckCircle2
+                size={18}
+                className="app-toast__icon"
+                aria-hidden="true"
+              />
+              <div className="app-toast__body">
+                <p className="app-toast__title">
+                  Cliente cadastrado com sucesso
+                </p>
+                <p className="app-toast__text">
+                  {createdCliente.nome} fica salvo em memória até recarregar a
+                  página.
+                </p>
+                <Link
+                  to={`/clientes/${encodeURIComponent(createdCliente.id)}`}
+                  className="app-toast__link"
+                  onClick={closeToast}
                 >
-                  <X size={16} aria-hidden="true" />
-                </button>
+                  Ver cliente
+                </Link>
               </div>
+              <button
+                type="button"
+                className="app-toast__close"
+                aria-label="Fechar notificação"
+                onClick={closeToast}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
             </div>
           ) : null}
         </div>

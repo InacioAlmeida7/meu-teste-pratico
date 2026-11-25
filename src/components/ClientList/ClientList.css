@@ -36,6 +36,36 @@
   text-align: right;
 }
 
+/* Botão de ordenação herda a tipografia do cabeçalho; ocupa a célula inteira para facilitar o clique. */
+.client-list__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.client-list__sort-btn svg {
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.client-list__sort-btn:hover {
+  background-color: var(--color-bg-subtle);
+}
+
+.client-list__sort-btn--active svg {
+  opacity: 1;
+}
+
 .client-list__row th,
 .client-list__row td {
   padding: var(--space-4);

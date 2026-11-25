@@ -1,6 +1,11 @@
 import { useMemo } from "react";
-import { Building2, IdCard, Search, X } from "lucide-react";
-import type { DocumentTypeFilter } from "../../hooks/useClientFilters";
+import { ArrowUpDown, Building2, IdCard, Search, X } from "lucide-react";
+import {
+  describeSort,
+  type DocumentTypeFilter,
+  type SortKey,
+  type SortState,
+} from "../../hooks/useClientFilters";
 import type { Agencia } from "../../types/models";
 import {
   SelectDropdown,
@@ -16,6 +21,8 @@ interface SearchToolbarProps {
   selectedAgencia: string;
   onAgenciaChange: (value: string) => void;
   agencias: Agencia[];
+  sort: SortState;
+  onSortChange: (value: SortState) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
 }
@@ -33,9 +40,25 @@ function parseDocumentType(value: string): DocumentTypeFilter {
   return "all";
 }
 
+const SORT_KEYS: SortKey[] = ["nome", "cpfCnpj", "email", "agencia"];
+
+// No mobile o cabeçalho da tabela fica oculto (cards); este select oferece a mesma ordenação.
+const SORT_OPTIONS: SelectOption[] = SORT_KEYS.flatMap((key) =>
+  (["asc", "desc"] as const).map((direction) => ({
+    value: `${key}:${direction}`,
+    label: describeSort({ key, direction }),
+  })),
+);
+
+function parseSort(value: string): SortState {
+  const [key, direction] = value.split(":");
+  const sortKey = SORT_KEYS.find((candidate) => candidate === key) ?? "nome";
+  return { key: sortKey, direction: direction === "desc" ? "desc" : "asc" };
+}
+
 /**
  * Barra de consulta e filtros (tipo de documento CPF/CNPJ e agência)
- * com labels explícitos e dropdowns customizados.
+ * com labels explícitos e dropdowns customizados; no mobile inclui "Ordenar por".
  * O botão principal "Novo Cliente" fica centralizado no Header institucional.
  */
 export function SearchToolbar({
@@ -46,6 +69,8 @@ export function SearchToolbar({
   selectedAgencia,
   onAgenciaChange,
   agencias,
+  sort,
+  onSortChange,
   hasActiveFilters,
   onClearFilters,
 }: SearchToolbarProps) {
@@ -124,6 +149,21 @@ export function SearchToolbar({
             placeholder="Todas as agências"
             leadingIcon={<Building2 size={17} />}
             listboxLabel="Filtrar por agência"
+          />
+        </div>
+
+        <div className="search-toolbar__field search-toolbar__field--sort">
+          <label htmlFor="sort-select" className="search-toolbar__label">
+            Ordenar por
+          </label>
+          <SelectDropdown
+            id="sort-select"
+            value={`${sort.key}:${sort.direction}`}
+            onChange={(nextValue) => onSortChange(parseSort(nextValue))}
+            options={SORT_OPTIONS}
+            placeholder="Nome (A–Z)"
+            leadingIcon={<ArrowUpDown size={17} />}
+            listboxLabel="Ordenar clientes"
           />
         </div>
       </div>

@@ -146,7 +146,8 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Campo de busca único com `<label>` acessível: filtra em tempo real por **Nome**, **Nome Social** ou **CPF/CNPJ** (com ou sem pontuação, ignorando acentos e maiúsculas/minúsculas).
    * Filtro complementar por **Agência** (dropdown preenchido dinamicamente a partir das agências carregadas, com opção "Todas as agências").
    * Botão "Limpar filtros" exibido quando há busca ou filtro ativo.
-   * **Regra obrigatória:** Qualquer alteração na busca ou filtro deve resetar automaticamente a página atual para **1**.
+   * **Ordenação:** cabeçalhos **Nome**, **CPF/CNPJ**, **E-mail** e **Agência** são botões que alternam crescente/decrescente (`aria-sort` na coluna ativa). Padrão: Nome em ordem alfabética pt-BR (sem diferenciar acentos). No mobile, onde o cabeçalho fica oculto, um campo "Ordenar por" oferece as mesmas opções.
+   * **Regra obrigatória:** Qualquer alteração na busca, filtro ou ordenação deve resetar automaticamente a página atual para **1**.
 3. **Listagem Responsiva (`ClientList`):**
    * Exibir apenas os dados principais: **Nome** (com indicador discreto de Nome Social se houver), **CPF/CNPJ formatado**, **E-mail**, **Agência** (código/nome) e botão/ação **"Ver detalhes"**.
    * **Desktop (`>= 768px`):** Tabela HTML semântica (`<table>`, `<thead>`, `<th scope="col">`, `<caption>` com `.sr-only`), linhas clicáveis ou com ação clara.
@@ -180,13 +181,13 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Validação via **React Hook Form + Zod**.
    * Gera `id` no front-end com `crypto.randomUUID()`.
    * Converte `dataNascimento` para objeto `Date` válido (sem erro de fuso horário).
-   * Insere o novo cliente no início da lista em memória (`BankDataContext`), fecha o modal, reseta o formulário e exibe uma notificação temporária acessível (`role="status"`): *"Cliente cadastrado com sucesso (armazenado em memória até o recarregamento da página)."*
+   * Insere o novo cliente na lista em memória (`BankDataContext`), limpa os filtros (ele aparece na sua posição conforme a ordenação ativa), fecha o modal, reseta o formulário e exibe uma notificação acessível (`role="status"`) no canto inferior direito, com link **"Ver cliente"**. Ela some sozinha após 7 s, com o tempo pausado enquanto o mouse ou o foco estiverem sobre ela.
 
 ### Rota `/clientes/:id` — Detalhes do Cliente (`ClientDetailPage`)
 1. **Navegação:** Link/botão **"← Voltar para a lista"** no topo. Se o `id` da URL não existir (ex.: cliente recém-cadastrado após F5), exibir estado "Cliente não encontrado" com botão para voltar à listagem.
 2. **Seção 1 — Dados Cadastrais Completos:** Exibir todas as propriedades do cliente (`nome`, `nomeSocial` se houver, `cpfCnpj`, `rg` ou `"Não informado"`, `dataNascimento` formatada, `estadoCivil` ou `"Não informado"`, `email`, `endereco`, `rendaAnual` e `patrimonio` formatados em BRL).
 3. **Seção 2 — Agência Vinculada (`AgencyCard`):** Cruzamento via `cliente.codigoAgencia === agencia.codigo`. Exibir `nome`, `codigo`, `endereco` e `id`.
-4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Para cada conta, exibir:
+4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Arranjo: 1 a 3 contas em cards lado a lado, 4 contas em grade 2×2 e 5 ou mais em lista compacta. Para cada conta, exibir:
    * Badge diferenciando **Conta Corrente** e **Conta Poupança**;
    * **Saldo** (destaque visual sutil para saldo positivo vs. negativo);
    * **Limite de Crédito** e **Crédito Disponível** (com barra visual simples em CSS mostrando proporção utilizada/disponível quando `limiteCredito > 0`).
