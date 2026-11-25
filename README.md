@@ -2,7 +2,7 @@
 
 Aplicação React + TypeScript para consultar, filtrar, detalhar e cadastrar (em memória) clientes, contas e agências lidos **ao vivo** de planilhas públicas do Google Sheets.
 
-> 🌐 **Acesse online:** **[meu-teste-pratico.vercel.app](https://meu-teste-pratico.vercel.app)**
+> 🌐 **Acesse online:** **[meu-teste-pratico-inacio-almeida.vercel.app](https://meu-teste-pratico-inacio-almeida.vercel.app/)**
 
 ---
 
