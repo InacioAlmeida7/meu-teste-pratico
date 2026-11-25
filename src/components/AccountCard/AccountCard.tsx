@@ -155,7 +155,7 @@ export function AccountCard({
           <button
             type="button"
             className="account-card__action-btn"
-            aria-expanded={isSelected}
+            aria-haspopup="dialog"
             onClick={() => onSelect(conta)}
           >
             <span>Ver detalhamento</span>

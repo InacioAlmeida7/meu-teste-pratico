@@ -135,6 +135,13 @@ export function ClientListPage() {
               onClearFilters={clearFilters}
             />
 
+            {/* Live region sempre montada: anuncia o resultado de cada busca/filtro. */}
+            <p className="sr-only" role="status">
+              {totalItems === 1
+                ? "1 cliente encontrado."
+                : `${totalItems} clientes encontrados.`}
+            </p>
+
             {totalItems === 0 ? (
               <StatusMessage
                 variant="empty"

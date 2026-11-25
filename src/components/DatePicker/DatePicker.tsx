@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import { Calendar } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { ptBR } from "react-day-picker/locale";
 import "react-day-picker/style.css";
 import { formatDateBR } from "../../utils/formatters";
-import { onlyDigits, parseDate } from "../../utils/normalizers";
+import { getLocalToday, onlyDigits, parseDate } from "../../utils/normalizers";
 import "./DatePicker.css";
 
 interface DatePickerProps {
@@ -18,6 +26,8 @@ interface DatePickerProps {
   required?: boolean;
   minYear?: number;
   maxDate?: Date;
+  /** Repassado ao input: permite ao React Hook Form focar o campo inválido. */
+  ref?: Ref<HTMLInputElement>;
 }
 
 /**
@@ -32,11 +42,6 @@ function applyDateMask(rawValue: string): string {
     return `${digits.slice(0, 2)}/${digits.slice(2)}`;
   }
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-}
-
-function getLocalToday(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
 /**
@@ -55,6 +60,7 @@ export function DatePicker({
   required = false,
   minYear = 1900,
   maxDate,
+  ref,
 }: DatePickerProps) {
   const popoverId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -226,7 +232,14 @@ export function DatePicker({
     <div ref={wrapperRef} className="date-picker">
       <div className="date-picker__control">
         <input
-          ref={inputRef}
+          ref={(node) => {
+            inputRef.current = node;
+            if (typeof ref === "function") {
+              ref(node);
+            } else if (ref) {
+              ref.current = node;
+            }
+          }}
           id={id}
           name={name}
           type="text"

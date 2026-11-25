@@ -158,24 +158,24 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
 5. **Feedback visual:**
    * Skeleton/estado de carregamento durante a requisição inicial.
    * Mensagem de erro amigável com botão **"Tentar novamente"** caso falhe a comunicação com o Google Sheets.
-   * Mensagem com `aria-live="polite"` quando nenhum cliente corresponder à busca.
+   * Empty state quando nenhum cliente corresponder à busca; a contagem de resultados é anunciada por uma região `role="status"` persistente.
 
 ### Modal de Cadastro de Novo Cliente (`ClientFormModal`)
 1. **Comportamento do Modal:**
-   * Implementado com o elemento HTML nativo `<dialog>` (`showModal()` / `close()`), garantindo bloqueio de fundo (backdrop), fechamento via tecla `Esc`, clique no botão fechar e retorno automático de foco ao botão acionador.
+   * Implementado com o elemento HTML nativo `<dialog>` (`showModal()` / `close()`), garantindo bloqueio de fundo (backdrop), fechamento via tecla `Esc`, clique no botão fechar ou no backdrop e retorno automático de foco ao botão acionador.
    * Rolagem interna limpa em telas menores (mobile) sem cortar os botões de ação.
 2. **Campos do Formulário (respeitando `Cliente`):**
    * `nome` (obrigatório, mín. 3 caracteres)
    * `nomeSocial` (opcional)
-   * `cpfCnpj` (obrigatório, 11 ou 14 dígitos, com validação de formato/dígitos verificadores e verificação opcional de duplicidade com aviso amigável)
+   * `cpfCnpj` (obrigatório, 11 ou 14 dígitos, com validação de formato/dígitos verificadores e bloqueio de duplicidade com registros existentes)
    * `rg` (opcional)
-   * `dataNascimento` (obrigatório, input `type="date"`, não pode ser data futura nem anterior a 1900)
+   * `dataNascimento` (obrigatório, `DatePicker` customizado no formato `DD/MM/AAAA`, não pode ser data futura nem anterior a 1900)
    * `email` (obrigatório, e-mail válido)
    * `endereco` (obrigatório, mín. 5 caracteres)
-   * `estadoCivil` (obrigatório, `<select>` com `"Solteiro" | "Casado" | "Viúvo" | "Divorciado"`)
+   * `estadoCivil` (obrigatório, `SelectDropdown` customizado com `"Solteiro" | "Casado" | "Viúvo" | "Divorciado"`)
    * `rendaAnual` (obrigatório, número `>= 0`)
    * `patrimonio` (obrigatório, número `>= 0`)
-   * `codigoAgencia` (obrigatório, `<select>` populado com as agências carregadas da planilha exibindo `Código - Nome`)
+   * `codigoAgencia` (obrigatório, `SelectDropdown` customizado populado com as agências carregadas da planilha exibindo `Código - Nome`)
 3. **Submissão em Memória:**
    * Validação via **React Hook Form + Zod**.
    * Gera `id` no front-end com `crypto.randomUUID()`.

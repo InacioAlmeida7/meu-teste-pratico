@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useRef, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Building2, X } from "lucide-react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { Building2, X } from "lucide-react";
+import {
+  Controller,
+  useForm,
+  useWatch,
+  type FieldErrors,
+} from "react-hook-form";
+import { useBackdropClose } from "../../hooks/useBackdropClose";
 import {
   ESTADO_CIVIL_OPTIONS,
   clienteSchema,
@@ -21,23 +27,96 @@ interface ClientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   agencias: Agencia[];
-  existingCpfs: ReadonlySet<string>;
+  /** CPFs/CNPJs (somente dígitos) já presentes na base, para bloquear duplicidade. */
+  existingDocuments: ReadonlySet<string>;
   onCreateClient: (novoCliente: Cliente) => void;
 }
 
+// A ordem das chaves segue a ordem visual dos campos (usada no foco do primeiro erro).
 const DEFAULT_VALUES: ClienteFormInput = {
   nome: "",
   nomeSocial: "",
   cpfCnpj: "",
   rg: "",
   dataNascimento: "",
+  estadoCivil: "",
   email: "",
   endereco: "",
-  estadoCivil: "",
   rendaAnual: "",
   patrimonio: "",
   codigoAgencia: "",
 };
+
+const FIELD_ORDER = Object.keys(DEFAULT_VALUES) as (keyof ClienteFormInput)[];
+
+const DUPLICATE_DOCUMENT_MESSAGE =
+  "Já existe um cliente com este CPF/CNPJ na base atual.";
+
+/** `crypto.randomUUID` só existe em contexto seguro (HTTPS ou localhost). */
+function createClientId(): string {
+  return typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `cli-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Liga um `<input>` nativo à mensagem de erro renderizada por `FormField`. */
+function errorAriaProps(id: string, error: string | undefined) {
+  return {
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": error ? `${id}-error` : undefined,
+  };
+}
+
+interface FormFieldProps {
+  id: string;
+  label: string;
+  required?: boolean;
+  fullWidth?: boolean;
+  error?: string;
+  children: ReactNode;
+}
+
+/**
+ * Rótulo + controle + mensagem de erro. O erro não usa `role="alert"`: ele é lido via
+ * `aria-describedby` quando o foco vai para o campo inválido, em vez de o leitor de tela
+ * anunciar todos os erros de uma vez ao enviar.
+ */
+function FormField({
+  id,
+  label,
+  required = false,
+  fullWidth = false,
+  error,
+  children,
+}: FormFieldProps) {
+  return (
+    <div
+      className={
+        fullWidth
+          ? "client-modal__field client-modal__field--full"
+          : "client-modal__field"
+      }
+    >
+      <label htmlFor={id} className="client-modal__label">
+        {label}
+        {required ? (
+          <>
+            {" "}
+            <span className="client-modal__required" aria-hidden="true">
+              *
+            </span>
+          </>
+        ) : null}
+      </label>
+      {children}
+      {error ? (
+        <p id={`${id}-error`} className="client-modal__error">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Modal de cadastro de novo cliente construído com `<dialog>` nativo (`showModal`/`close`),
@@ -48,11 +127,11 @@ export function ClientFormModal({
   isOpen,
   onClose,
   agencias,
-  existingCpfs,
+  existingDocuments,
   onCreateClient,
 }: ClientFormModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const pressedOutsideRef = useRef(false);
+  const backdropHandlers = useBackdropClose(dialogRef, closeDialog);
 
   const agencyOptions = useMemo<SelectOption[]>(() => {
     const sorted = [...agencias].sort((a, b) => a.codigo - b.codigo);
@@ -77,44 +156,41 @@ export function ClientFormModal({
     control,
     handleSubmit,
     reset,
+    setFocus,
     formState: { errors, dirtyFields, isSubmitted, isSubmitting },
   } = useForm<ClienteFormInput, unknown, ClienteFormOutput>({
     resolver: zodResolver(clienteSchema),
     mode: "onTouched",
     defaultValues: DEFAULT_VALUES,
+    // O RHF registra os `Controller`s depois dos `register`, então o foco
+    // automático pularia DatePicker/SelectDropdown; focamos na ordem visual.
+    shouldFocusError: false,
   });
 
-  const nomeError =
-    isSubmitted || dirtyFields.nome ? errors.nome : undefined;
-  const nomeSocialError =
-    isSubmitted || dirtyFields.nomeSocial ? errors.nomeSocial : undefined;
-  const cpfCnpjError =
-    isSubmitted || dirtyFields.cpfCnpj ? errors.cpfCnpj : undefined;
-  const rgError = isSubmitted || dirtyFields.rg ? errors.rg : undefined;
-  const dataNascimentoError =
-    isSubmitted || dirtyFields.dataNascimento
-      ? errors.dataNascimento
-      : undefined;
-  const estadoCivilError =
-    isSubmitted || dirtyFields.estadoCivil ? errors.estadoCivil : undefined;
-  const emailError =
-    isSubmitted || dirtyFields.email ? errors.email : undefined;
-  const enderecoError =
-    isSubmitted || dirtyFields.endereco ? errors.endereco : undefined;
-  const rendaAnualError =
-    isSubmitted || dirtyFields.rendaAnual ? errors.rendaAnual : undefined;
-  const patrimonioError =
-    isSubmitted || dirtyFields.patrimonio ? errors.patrimonio : undefined;
-  const codigoAgenciaError =
-    isSubmitted || dirtyFields.codigoAgencia
-      ? errors.codigoAgencia
-      : undefined;
+  // Erros aparecem só após o envio ou depois de o campo ser editado:
+  // percorrer campos vazios com Tab não deve pintar o formulário de vermelho.
+  function errorFor(name: keyof ClienteFormInput): string | undefined {
+    return isSubmitted || dirtyFields[name] ? errors[name]?.message : undefined;
+  }
 
-  const watchedCpfCnpj = useWatch({ control, name: "cpfCnpj" }) ?? "";
-  const cpfDigits = onlyDigits(watchedCpfCnpj);
-  const hasDuplicateCpf =
-    (cpfDigits.length === 11 || cpfDigits.length === 14) &&
-    existingCpfs.has(cpfDigits);
+  // Duplicidade depende da base carregada (fora do schema): é exibida enquanto o
+  // usuário digita e também bloqueia o envio em `handleValidSubmit`.
+  const cpfCnpjDigits = onlyDigits(useWatch({ control, name: "cpfCnpj" }) ?? "");
+  const isDuplicateDocument =
+    (cpfCnpjDigits.length === 11 || cpfCnpjDigits.length === 14) &&
+    existingDocuments.has(cpfCnpjDigits);
+
+  const nomeError = errorFor("nome");
+  const cpfCnpjError =
+    errorFor("cpfCnpj") ??
+    (isDuplicateDocument ? DUPLICATE_DOCUMENT_MESSAGE : undefined);
+  const dataNascimentoError = errorFor("dataNascimento");
+  const estadoCivilError = errorFor("estadoCivil");
+  const emailError = errorFor("email");
+  const enderecoError = errorFor("endereco");
+  const rendaAnualError = errorFor("rendaAnual");
+  const patrimonioError = errorFor("patrimonio");
+  const codigoAgenciaError = errorFor("codigoAgencia");
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -132,63 +208,32 @@ export function ClientFormModal({
     }
   }, [isOpen]);
 
-  function handleRequestClose() {
-    reset(DEFAULT_VALUES);
+  function closeDialog() {
     dialogRef.current?.close();
   }
 
+  // Único ponto de saída: Esc, backdrop, botões e envio disparam o evento nativo `close`.
   function handleNativeClose() {
     reset(DEFAULT_VALUES);
     onClose();
   }
 
-  function isPointerOutsideDialog(
-    event: PointerEvent<HTMLDialogElement>,
-  ): boolean {
-    const dialog = dialogRef.current;
-    if (!dialog || event.target !== dialog) {
-      return false;
-    }
-    const rect = dialog.getBoundingClientRect();
-    return (
-      event.clientX < rect.left ||
-      event.clientX > rect.right ||
-      event.clientY < rect.top ||
-      event.clientY > rect.bottom
-    );
-  }
-
-  function handlePointerDown(event: PointerEvent<HTMLDialogElement>) {
-    pressedOutsideRef.current = isPointerOutsideDialog(event);
-  }
-
-  function handlePointerUp(event: PointerEvent<HTMLDialogElement>) {
-    const wasOutside = pressedOutsideRef.current;
-    pressedOutsideRef.current = false;
-    if (wasOutside && isPointerOutsideDialog(event)) {
-      handleRequestClose();
+  function focusFirstInvalid(formErrors: FieldErrors<ClienteFormInput>) {
+    const firstInvalid = FIELD_ORDER.find((name) => formErrors[name]);
+    if (firstInvalid) {
+      setFocus(firstInvalid);
     }
   }
 
   function handleValidSubmit(data: ClienteFormOutput) {
-    const novoCliente: Cliente = {
-      id: crypto.randomUUID(),
-      nome: data.nome,
-      nomeSocial: data.nomeSocial,
-      cpfCnpj: data.cpfCnpj,
-      rg: data.rg,
-      dataNascimento: data.dataNascimento,
-      email: data.email,
-      endereco: data.endereco,
-      estadoCivil: data.estadoCivil,
-      rendaAnual: data.rendaAnual,
-      patrimonio: data.patrimonio,
-      codigoAgencia: data.codigoAgencia,
-    };
+    if (existingDocuments.has(data.cpfCnpj)) {
+      setFocus("cpfCnpj");
+      return;
+    }
 
+    const novoCliente: Cliente = { id: createClientId(), ...data };
     onCreateClient(novoCliente);
-    reset(DEFAULT_VALUES);
-    onClose();
+    closeDialog();
   }
 
   return (
@@ -203,21 +248,20 @@ export function ClientFormModal({
         }
       }}
       onClose={handleNativeClose}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
+      {...backdropHandlers}
     >
       <form
         className="client-modal__form"
         noValidate
         onSubmit={(event) => {
-          void handleSubmit(handleValidSubmit)(event);
+          void handleSubmit(handleValidSubmit, focusFirstInvalid)(event);
         }}
       >
         <header className="client-modal__header">
           <div className="client-modal__header-text">
-            <h1 id="client-form-title" className="client-modal__title">
+            <h2 id="client-form-title" className="client-modal__title">
               Cadastrar Novo Cliente
-            </h1>
+            </h2>
             <p className="client-modal__subtitle">
               Os campos com{" "}
               <span className="client-modal__required" aria-hidden="true">
@@ -231,7 +275,7 @@ export function ClientFormModal({
             type="button"
             className="client-modal__close"
             aria-label="Fechar modal"
-            onClick={handleRequestClose}
+            onClick={closeDialog}
           >
             <X size={20} aria-hidden="true" />
           </button>
@@ -239,67 +283,40 @@ export function ClientFormModal({
 
         <div className="client-modal__body">
           <div className="client-modal__grid">
-            <div className="client-modal__field client-modal__field--full">
-              <label htmlFor="field-nome" className="client-modal__label">
-                Nome completo{" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-nome"
+              label="Nome completo"
+              required
+              fullWidth
+              error={nomeError}
+            >
               <input
                 id="field-nome"
                 type="text"
                 className="client-modal__input"
                 autoComplete="name"
                 required
-                aria-invalid={nomeError ? "true" : undefined}
-                aria-describedby={nomeError ? "field-nome-error" : undefined}
+                {...errorAriaProps("field-nome", nomeError)}
                 {...register("nome")}
               />
-              {nomeError ? (
-                <p
-                  id="field-nome-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {nomeError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field client-modal__field--full">
-              <label htmlFor="field-nomeSocial" className="client-modal__label">
-                Nome social
-              </label>
+            <FormField id="field-nomeSocial" label="Nome social" fullWidth>
               <input
                 id="field-nomeSocial"
                 type="text"
                 className="client-modal__input"
                 placeholder="Opcional"
-                aria-invalid={nomeSocialError ? "true" : undefined}
-                aria-describedby={
-                  nomeSocialError ? "field-nomeSocial-error" : undefined
-                }
                 {...register("nomeSocial")}
               />
-              {nomeSocialError ? (
-                <p
-                  id="field-nomeSocial-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {nomeSocialError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field">
-              <label htmlFor="field-cpfCnpj" className="client-modal__label">
-                CPF ou CNPJ{" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-cpfCnpj"
+              label="CPF ou CNPJ"
+              required
+              error={cpfCnpjError}
+            >
               <input
                 id="field-cpfCnpj"
                 type="text"
@@ -309,44 +326,12 @@ export function ClientFormModal({
                 autoCorrect="off"
                 spellCheck={false}
                 required
-                aria-invalid={cpfCnpjError ? "true" : undefined}
-                aria-describedby={
-                  [
-                    cpfCnpjError ? "field-cpfCnpj-error" : null,
-                    hasDuplicateCpf ? "field-cpfCnpj-duplicate" : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" ") || undefined
-                }
+                {...errorAriaProps("field-cpfCnpj", cpfCnpjError)}
                 {...register("cpfCnpj")}
               />
-              {cpfCnpjError ? (
-                <p
-                  id="field-cpfCnpj-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {cpfCnpjError.message}
-                </p>
-              ) : null}
-              {hasDuplicateCpf ? (
-                <p
-                  id="field-cpfCnpj-duplicate"
-                  className="client-modal__warning"
-                  role="status"
-                >
-                  <AlertCircle size={14} aria-hidden="true" />
-                  <span>
-                    Já existe um cliente com este CPF/CNPJ na base atual.
-                  </span>
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field">
-              <label htmlFor="field-rg" className="client-modal__label">
-                RG
-              </label>
+            <FormField id="field-rg" label="RG">
               <input
                 id="field-rg"
                 type="text"
@@ -354,36 +339,22 @@ export function ClientFormModal({
                 placeholder="Opcional (ex.: ES1234567 ou ISENTO)"
                 autoCorrect="off"
                 spellCheck={false}
-                aria-invalid={rgError ? "true" : undefined}
-                aria-describedby={rgError ? "field-rg-error" : undefined}
                 {...register("rg")}
               />
-              {rgError ? (
-                <p
-                  id="field-rg-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {rgError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field">
-              <label
-                htmlFor="field-dataNascimento"
-                className="client-modal__label"
-              >
-                Data de nascimento{" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-dataNascimento"
+              label="Data de nascimento"
+              required
+              error={dataNascimentoError}
+            >
               <Controller
                 name="dataNascimento"
                 control={control}
                 render={({ field }) => (
                   <DatePicker
+                    ref={field.ref}
                     id="field-dataNascimento"
                     name={field.name}
                     value={field.value}
@@ -399,29 +370,20 @@ export function ClientFormModal({
                   />
                 )}
               />
-              {dataNascimentoError ? (
-                <p
-                  id="field-dataNascimento-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {dataNascimentoError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field">
-              <label htmlFor="field-estadoCivil" className="client-modal__label">
-                Estado civil{" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-estadoCivil"
+              label="Estado civil"
+              required
+              error={estadoCivilError}
+            >
               <Controller
                 name="estadoCivil"
                 control={control}
                 render={({ field }) => (
                   <SelectDropdown
+                    ref={field.ref}
                     id="field-estadoCivil"
                     value={field.value}
                     onChange={field.onChange}
@@ -437,24 +399,15 @@ export function ClientFormModal({
                   />
                 )}
               />
-              {estadoCivilError ? (
-                <p
-                  id="field-estadoCivil-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {estadoCivilError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field client-modal__field--full">
-              <label htmlFor="field-email" className="client-modal__label">
-                E-mail{" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-email"
+              label="E-mail"
+              required
+              fullWidth
+              error={emailError}
+            >
               <input
                 id="field-email"
                 type="email"
@@ -465,30 +418,18 @@ export function ClientFormModal({
                 autoCapitalize="none"
                 spellCheck={false}
                 required
-                aria-invalid={emailError ? "true" : undefined}
-                aria-describedby={
-                  emailError ? "field-email-error" : undefined
-                }
+                {...errorAriaProps("field-email", emailError)}
                 {...register("email")}
               />
-              {emailError ? (
-                <p
-                  id="field-email-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {emailError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field client-modal__field--full">
-              <label htmlFor="field-endereco" className="client-modal__label">
-                Endereço{" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-endereco"
+              label="Endereço"
+              required
+              fullWidth
+              error={enderecoError}
+            >
               <input
                 id="field-endereco"
                 type="text"
@@ -496,30 +437,17 @@ export function ClientFormModal({
                 placeholder="Rua, número - Cidade UF"
                 autoComplete="street-address"
                 required
-                aria-invalid={enderecoError ? "true" : undefined}
-                aria-describedby={
-                  enderecoError ? "field-endereco-error" : undefined
-                }
+                {...errorAriaProps("field-endereco", enderecoError)}
                 {...register("endereco")}
               />
-              {enderecoError ? (
-                <p
-                  id="field-endereco-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {enderecoError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field">
-              <label htmlFor="field-rendaAnual" className="client-modal__label">
-                Renda anual (R$){" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-rendaAnual"
+              label="Renda anual (R$)"
+              required
+              error={rendaAnualError}
+            >
               <input
                 id="field-rendaAnual"
                 type="text"
@@ -527,30 +455,17 @@ export function ClientFormModal({
                 className="client-modal__input tabular-nums"
                 placeholder="Ex.: 85000,00"
                 required
-                aria-invalid={rendaAnualError ? "true" : undefined}
-                aria-describedby={
-                  rendaAnualError ? "field-rendaAnual-error" : undefined
-                }
+                {...errorAriaProps("field-rendaAnual", rendaAnualError)}
                 {...register("rendaAnual")}
               />
-              {rendaAnualError ? (
-                <p
-                  id="field-rendaAnual-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {rendaAnualError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field">
-              <label htmlFor="field-patrimonio" className="client-modal__label">
-                Patrimônio (R$){" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-patrimonio"
+              label="Patrimônio (R$)"
+              required
+              error={patrimonioError}
+            >
               <input
                 id="field-patrimonio"
                 type="text"
@@ -558,38 +473,24 @@ export function ClientFormModal({
                 className="client-modal__input tabular-nums"
                 placeholder="Ex.: 250000,00"
                 required
-                aria-invalid={patrimonioError ? "true" : undefined}
-                aria-describedby={
-                  patrimonioError ? "field-patrimonio-error" : undefined
-                }
+                {...errorAriaProps("field-patrimonio", patrimonioError)}
                 {...register("patrimonio")}
               />
-              {patrimonioError ? (
-                <p
-                  id="field-patrimonio-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {patrimonioError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
-            <div className="client-modal__field client-modal__field--full">
-              <label
-                htmlFor="field-codigoAgencia"
-                className="client-modal__label"
-              >
-                Agência vinculada{" "}
-                <span className="client-modal__required" aria-hidden="true">
-                  *
-                </span>
-              </label>
+            <FormField
+              id="field-codigoAgencia"
+              label="Agência vinculada"
+              required
+              fullWidth
+              error={codigoAgenciaError}
+            >
               <Controller
                 name="codigoAgencia"
                 control={control}
                 render={({ field }) => (
                   <SelectDropdown
+                    ref={field.ref}
                     id="field-codigoAgencia"
                     value={field.value}
                     onChange={field.onChange}
@@ -608,25 +509,12 @@ export function ClientFormModal({
                   />
                 )}
               />
-              {codigoAgenciaError ? (
-                <p
-                  id="field-codigoAgencia-error"
-                  className="client-modal__error"
-                  role="alert"
-                >
-                  {codigoAgenciaError.message}
-                </p>
-              ) : null}
-            </div>
+            </FormField>
           </div>
         </div>
 
         <footer className="client-modal__footer">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={handleRequestClose}
-          >
+          <button type="button" className="btn btn-ghost" onClick={closeDialog}>
             Cancelar
           </button>
           <button

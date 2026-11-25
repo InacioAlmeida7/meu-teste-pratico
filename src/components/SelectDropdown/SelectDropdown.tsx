@@ -7,6 +7,7 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type Ref,
 } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import "./SelectDropdown.css";
@@ -29,6 +30,8 @@ interface SelectDropdownProps {
   ariaDescribedBy?: string;
   required?: boolean;
   listboxLabel: string;
+  /** Repassado ao botão: permite ao React Hook Form focar o campo inválido. */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 /**
@@ -48,6 +51,7 @@ export function SelectDropdown({
   ariaDescribedBy,
   required = false,
   listboxLabel,
+  ref,
 }: SelectDropdownProps) {
   const listboxId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -302,7 +306,14 @@ export function SelectDropdown({
   return (
     <div ref={wrapperRef} className="select-dropdown">
       <button
-        ref={triggerRef}
+        ref={(node) => {
+          triggerRef.current = node;
+          if (typeof ref === "function") {
+            ref(node);
+          } else if (ref) {
+            ref.current = node;
+          }
+        }}
         id={id}
         type="button"
         role="combobox"

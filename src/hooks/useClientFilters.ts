@@ -16,7 +16,6 @@ export interface ClientFiltersResult {
   startItem: number;
   endItem: number;
   hasActiveFilters: boolean;
-  filteredClientes: Cliente[];
   paginatedClientes: Cliente[];
   setSearchQuery: (value: string) => void;
   setSelectedAgencia: (value: string) => void;
@@ -153,7 +152,6 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     startItem,
     endItem,
     hasActiveFilters,
-    filteredClientes,
     paginatedClientes,
     setSearchQuery,
     setSelectedAgencia,

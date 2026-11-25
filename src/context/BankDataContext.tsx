@@ -16,19 +16,17 @@ interface BankDataProviderProps {
   children: ReactNode;
 }
 
-function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException
-    ? error.name === "AbortError"
-    : error instanceof Error && error.name === "AbortError";
-}
-
 /**
  * Provedor de estado em memória dos dados bancários.
  * Carrega as 3 planilhas vivas na montagem com suporte a cancelamento via `AbortController`
  * e permite inserção em memória de novos clientes no topo da listagem.
+ *
+ * Clientes cadastrados ficam em um estado separado e são mesclados sobre os da planilha:
+ * assim um "Tentar novamente"/recarregamento não apaga o que foi cadastrado na sessão.
  */
 export function BankDataProvider({ children }: BankDataProviderProps) {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [fetchedClientes, setFetchedClientes] = useState<Cliente[]>([]);
+  const [addedClientes, setAddedClientes] = useState<Cliente[]>([]);
   const [contas, setContas] = useState<Conta[]>([]);
   const [agencias, setAgencias] = useState<Agencia[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -48,11 +46,12 @@ export function BankDataProvider({ children }: BankDataProviderProps) {
           return;
         }
 
-        setClientes(data.clientes);
+        setFetchedClientes(data.clientes);
         setContas(data.contas);
         setAgencias(data.agencias);
       } catch (err: unknown) {
-        if (controller.signal.aborted || isAbortError(err)) {
+        // Cancelamentos (StrictMode, novo "Tentar novamente") não são erros de tela.
+        if (controller.signal.aborted) {
           return;
         }
 
@@ -80,8 +79,13 @@ export function BankDataProvider({ children }: BankDataProviderProps) {
   }, []);
 
   const addCliente = useCallback((novoCliente: Cliente) => {
-    setClientes((prev) => [novoCliente, ...prev]);
+    setAddedClientes((prev) => [novoCliente, ...prev]);
   }, []);
+
+  const clientes = useMemo(
+    () => [...addedClientes, ...fetchedClientes],
+    [addedClientes, fetchedClientes],
+  );
 
   const value = useMemo<BankDataContextValue>(
     () => ({

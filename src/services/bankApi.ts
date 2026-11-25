@@ -20,6 +20,30 @@ export const BANK_SHEET_URLS = {
     "https://docs.google.com/spreadsheets/d/1LkyaeCgiyaIN1IxXnbZQPmVMIcht3PIxMDUXHsvczK0/gviz/tq?tqx=out:csv&sheet=agencias",
 } as const;
 
+const CLIENTES_HEADERS = [
+  "id",
+  "cpfCnpj",
+  "rg",
+  "dataNascimento",
+  "nome",
+  "nomeSocial",
+  "email",
+  "endereco",
+  "rendaAnual",
+  "patrimonio",
+  "estadoCivil",
+  "codigoAgencia",
+] as const;
+const CONTAS_HEADERS = [
+  "id",
+  "cpfCnpjCliente",
+  "tipo",
+  "saldo",
+  "limiteCredito",
+  "creditoDisponivel",
+] as const;
+const AGENCIAS_HEADERS = ["id", "codigo", "nome", "endereco"] as const;
+
 /**
  * Busca um arquivo CSV em tempo de execução via Fetch API e retorna o corpo como texto.
  */
@@ -28,7 +52,8 @@ async function fetchCsvText(
   sourceName: string,
   signal?: AbortSignal,
 ): Promise<string> {
-  const response = await fetch(url, { signal });
+  // `no-store` garante a leitura viva da planilha, sem cópia em cache HTTP.
+  const response = await fetch(url, { signal, cache: "no-store" });
 
   if (!response.ok) {
     throw new Error(
@@ -43,8 +68,16 @@ async function fetchCsvText(
  * Faz o parsing de texto CSV via PapaParse preservando resiliência contra colunas extras vazias.
  * A planilha real de `clientes` exporta 14 colunas vazias à direita; renomeá-las em
  * `transformHeader` evita alertas falsos de cabeçalho duplicado sem descartar dados.
+ *
+ * Colunas extras são toleradas, mas a falta de uma coluna obrigatória (renomeação na
+ * planilha ou resposta HTML de erro/login do Google) vira erro explícito na tela,
+ * em vez de descartar todas as linhas e exibir uma listagem vazia enganosa.
  */
-function parseCsvRows(csvText: string, sourceName: string): CsvRow[] {
+function parseCsvRows(
+  csvText: string,
+  sourceName: string,
+  requiredHeaders: readonly string[],
+): CsvRow[] {
   const parsed = Papa.parse<CsvRow>(csvText, {
     header: true,
     skipEmptyLines: true,
@@ -54,6 +87,14 @@ function parseCsvRows(csvText: string, sourceName: string): CsvRow[] {
     },
   });
 
+  const headers = new Set(parsed.meta.fields ?? []);
+  const missingHeaders = requiredHeaders.filter((header) => !headers.has(header));
+  if (missingHeaders.length > 0) {
+    throw new Error(
+      `A planilha de ${sourceName} não possui as colunas obrigatórias: ${missingHeaders.join(", ")}.`,
+    );
+  }
+
   if (parsed.errors.length > 0) {
     console.warn(
       `[bankApi] Avisos de parsing no CSV de ${sourceName}:`,
@@ -62,6 +103,36 @@ function parseCsvRows(csvText: string, sourceName: string): CsvRow[] {
   }
 
   return parsed.data;
+}
+
+/**
+ * Lê um valor monetário da planilha. Célula preenchida com texto não numérico é
+ * exibida como 0 (o contrato exige `number`), mas fica registrada no console.
+ */
+function readAmount(value: unknown, context: string): number {
+  const parsed = parseNumber(value);
+  if (parsed === null && cleanText(value)) {
+    console.warn(
+      `[bankApi] ${context} possui valor numérico inválido ("${cleanText(value)}"); exibido como 0.`,
+    );
+  }
+  return parsed ?? 0;
+}
+
+/**
+ * Mantém apenas a primeira ocorrência de cada `id`: ids repetidos gerariam
+ * `key` duplicada no React e rotas `/clientes/:id` ambíguas.
+ */
+function dedupeById<T extends { id: string }>(items: T[], sourceName: string): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) {
+      console.warn(`[bankApi] ${sourceName}: id duplicado "${item.id}" ignorado.`);
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
 }
 
 function mapRowToCliente(row: CsvRow, index: number): Cliente | null {
@@ -75,7 +146,7 @@ function mapRowToCliente(row: CsvRow, index: number): Cliente | null {
     return null;
   }
 
-  const id = cleanText(row.id) || `cli-row-${index + 1}`;
+  const id = cleanText(row.id) || `cli-row-${index + 2}`;
   const dataNascimento = parseDate(row.dataNascimento);
 
   if (Number.isNaN(dataNascimento.getTime())) {
@@ -107,8 +178,8 @@ function mapRowToCliente(row: CsvRow, index: number): Cliente | null {
     nomeSocial: cleanOptionalText(row.nomeSocial),
     email: cleanText(row.email),
     endereco: cleanText(row.endereco),
-    rendaAnual: parseNumber(row.rendaAnual),
-    patrimonio: parseNumber(row.patrimonio),
+    rendaAnual: readAmount(row.rendaAnual, `Cliente ${id} (rendaAnual)`),
+    patrimonio: readAmount(row.patrimonio, `Cliente ${id} (patrimonio)`),
     estadoCivil: estadoCivil ?? "Solteiro",
     codigoAgencia: codigoAgencia ?? 0,
   };
@@ -125,7 +196,7 @@ function mapRowToConta(row: CsvRow, index: number): Conta | null {
     return null;
   }
 
-  const id = cleanText(row.id) || `cnt-row-${index + 1}`;
+  const id = cleanText(row.id) || `cnt-row-${index + 2}`;
 
   if (cpfCnpjCliente.length !== 11 && cpfCnpjCliente.length !== 14) {
     console.warn(
@@ -137,9 +208,12 @@ function mapRowToConta(row: CsvRow, index: number): Conta | null {
     id,
     cpfCnpjCliente,
     tipo,
-    saldo: parseNumber(row.saldo),
-    limiteCredito: parseNumber(row.limiteCredito),
-    creditoDisponivel: parseNumber(row.creditoDisponivel),
+    saldo: readAmount(row.saldo, `Conta ${id} (saldo)`),
+    limiteCredito: readAmount(row.limiteCredito, `Conta ${id} (limiteCredito)`),
+    creditoDisponivel: readAmount(
+      row.creditoDisponivel,
+      `Conta ${id} (creditoDisponivel)`,
+    ),
   };
 }
 
@@ -154,7 +228,7 @@ function mapRowToAgencia(row: CsvRow, index: number): Agencia | null {
     return null;
   }
 
-  const id = cleanText(row.id) || `ag-row-${index + 1}`;
+  const id = cleanText(row.id) || `ag-row-${index + 2}`;
 
   return {
     id,
@@ -175,17 +249,21 @@ export async function fetchBankData(signal?: AbortSignal): Promise<BankData> {
     fetchCsvText(BANK_SHEET_URLS.agencias, "agencias", signal),
   ]);
 
-  const clientes = parseCsvRows(clientesCsv, "clientes")
+  const clientes = parseCsvRows(clientesCsv, "clientes", CLIENTES_HEADERS)
     .map(mapRowToCliente)
     .filter((cliente): cliente is Cliente => cliente !== null);
 
-  const contas = parseCsvRows(contasCsv, "contas")
+  const contas = parseCsvRows(contasCsv, "contas", CONTAS_HEADERS)
     .map(mapRowToConta)
     .filter((conta): conta is Conta => conta !== null);
 
-  const agencias = parseCsvRows(agenciasCsv, "agencias")
+  const agencias = parseCsvRows(agenciasCsv, "agencias", AGENCIAS_HEADERS)
     .map(mapRowToAgencia)
     .filter((agencia): agencia is Agencia => agencia !== null);
 
-  return { clientes, contas, agencias };
+  return {
+    clientes: dedupeById(clientes, "clientes"),
+    contas: dedupeById(contas, "contas"),
+    agencias: dedupeById(agencias, "agencias"),
+  };
 }

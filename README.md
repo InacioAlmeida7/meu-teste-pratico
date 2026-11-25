@@ -9,29 +9,29 @@ Sistema web frontend para consulta, filtragem, detalhamento e cadastro em memór
 ## Visão Geral e Funcionalidades Implementadas
 
 ### 1. Listagem e Pesquisa de Clientes (`/`)
-- **Leitura viva em tempo de execução:** busca simultânea das três planilhas (`clientes`, `contas` e `agencias`) via `Fetch API` + `Response.text()` + `Promise.all`, com suporte a cancelamento via `AbortController`.
+- **Leitura viva em tempo de execução:** busca simultânea das três planilhas (`clientes`, `contas` e `agencias`) via `Fetch API` + `Response.text()` + `Promise.all`, com `cache: "no-store"`, cancelamento via `AbortController` (StrictMode e "Tentar novamente") e validação dos cabeçalhos obrigatórios de cada planilha (erro claro se uma coluna for renomeada ou removida).
 - **Faixa institucional e métricas:** cabeçalho e banner Banestes exibindo o total de clientes, agências e contas carregadas em memória.
 - **Busca e filtros combinados (`SearchToolbar`):**
   - Busca textual instantânea por **Nome**, **Nome Social** ou **CPF/CNPJ** (ignorando acentos, caixa e pontuação).
-  - Filtro por **Documento**: `Todos (CPF e CNPJ)`, `Somente CPF` e `Somente CNPJ`.
+  - Filtro por **Documento**: `Ambos (CPF e CNPJ)`, `Somente CPF` e `Somente CNPJ`.
   - Filtro dinâmico por **Agência**: dropdown customizado (`SelectDropdown`) populado com as agências carregadas.
   - Botão **Limpar filtros** e reset automático para a página **1** sempre que qualquer critério muda.
 - **Listagem responsiva (`ClientList`):** tabela semântica (`<table>`, `<caption>` acessível, `<th scope="col">`) no desktop (`>= 768px`) e cards empilhados no mobile (`< 768px`), com indicação discreta de nome social e distinção `PF`/`PJ`.
-- **Paginação (`Pagination`):** máximo de 10 clientes por página, contador `"Mostrando X–Y de Z clientes"`, janela de 3 páginas nas extremidades e `aria-current="page"`.
+- **Paginação (`Pagination`):** máximo de 10 clientes por página, contador `"Mostrando X–Y de Z clientes"` (também anunciado por uma região `role="status"`), janela de 3 páginas com reticências e `aria-current="page"`.
 - **Estados resilientes (`StatusMessage`):** skeleton de carregamento, aviso de erro com ação `"Tentar novamente"` e empty state para consultas sem resultado.
 
 ### 2. Cadastro em Memória (`ClientFormModal`)
-- Modal nativo em `<dialog>` (`showModal()` / `close()`), fechamento por `Esc`, clique no backdrop e retorno automático de foco.
-- Validação declarativa com **React Hook Form + Zod v4**, incluindo verificação completa dos dígitos verificadores de CPF e CNPJ (`validators.ts`), aviso amigável de duplicidade com registros existentes, calendário customizado (`DatePicker` com `react-day-picker` + `date-fns`) e seletor de agências (`SelectDropdown`).
-- Geração de identificador com `crypto.randomUUID()`, inserção imediata no topo da lista em memória (`BankDataContext`), fechamento automático do modal e notificação acessível (`role="status"`).
+- Modal nativo em `<dialog>` (`showModal()` / `close()`), fechamento por `Esc` ou clique no backdrop (apenas quando o clique começa e termina fora do painel, via `useBackdropClose`), reset do formulário ao fechar e retorno automático de foco.
+- Validação declarativa com **React Hook Form + Zod v4**, incluindo verificação completa dos dígitos verificadores de CPF e CNPJ (`validators.ts`), bloqueio de CPF/CNPJ já cadastrado (erro no próprio campo), valores monetários em formato pt-BR (`85.000,50`) ou en-US, calendário customizado (`DatePicker` com `react-day-picker`, formato `DD/MM/AAAA`) e seletores customizados (`SelectDropdown`). Em caso de erro, o foco vai para o primeiro campo inválido.
+- Geração de identificador com `crypto.randomUUID()` (com fallback quando indisponível), inserção imediata no topo da lista em memória (`BankDataContext`), fechamento automático do modal e notificação acessível (região `role="status"` persistente). Clientes cadastrados são preservados ao clicar em "Tentar novamente".
 
 ### 3. Detalhes Interativos do Cliente (`/clientes/:id`)
 - **Hero institucional com KPIs integrados:** identidade do cliente à esquerda e resumo financeiro consolidado à direita (**Saldo Total**, **Crédito Disponível** e **Patrimônio Declarado**).
-- **Folha branca unificada com abas acessíveis (`Visão Resumo`, `Contas Bancárias`, `Cadastro e Agência`):**
-  - **Visão Resumo:** apresenta **Dados Básicos** e **Resumo das Contas Bancárias** em blocos delimitados na mesma superfície contínua, com atalhos diretos para detalhamento.
+- **Folha branca unificada com abas acessíveis (`Resumo`, `Contas Bancárias`, `Cadastro e Agência`)** no padrão WAI-ARIA (setas, `Home`/`End`, `aria-controls`); os atalhos do Resumo movem o foco para a aba aberta. A rota é carregada sob demanda (`React.lazy`).
+  - **Resumo:** apresenta **Dados Básicos** e **Resumo das Contas Bancárias** em blocos delimitados na mesma superfície contínua, com atalhos diretos para detalhamento.
   - **Contas Bancárias:** barra consolidada de uso de limites + cards responsivos com *container queries* e alinhamento automático em 2 ou 3 colunas no desktop.
   - **Cadastro e Agência:** dados cadastrais completos à esquerda e agência vinculada à direita (`AgencyCard`) com altura alinhada.
-- **Drawer lateral animado (`AccountDrawer`):** implementado com `<dialog>` nativo, exibindo saldo, limite, crédito disponível, crédito utilizado, percentual de uso com barra segmentada e navegação entre as contas do cliente.
+- **Drawer lateral animado (`AccountDrawer`):** implementado com `<dialog>` nativo, exibindo saldo, limite, crédito disponível, crédito utilizado e percentual de uso com barra segmentada (ou "Sem limite" quando não há limite contratado).
 - **Tratamento de anomalias:** mensagens dedicadas para ID de cliente não encontrado, código de agência inexistente na planilha (ex.: `CLI-021`, código `9999`) ou cliente sem contas vinculadas.
 
 ---
@@ -43,11 +43,11 @@ Seguindo o princípio **KISS**, o projeto utiliza React 19 funcional, TypeScript
 A inspeção direta das planilhas vivas do Google Sheets revelou inconsistências reais tratadas em `src/services/bankApi.ts` e `src/utils/normalizers.ts`:
 
 1. **Colunas extras vazias no CSV:** a planilha de `clientes` exporta 14 colunas em branco à direita. Em `parseCsvRows` (PapaParse `{ header: true, skipEmptyLines: true }`), `transformHeader` renomeia cabeçalhos vazios para `__empty_<index>`, evitando falsos avisos de cabeçalho duplicado.
-2. **Zeros à esquerda removidos pelo Google Sheets:** células numéricas sem formatação de texto perdem zeros à esquerda (ex.: CPFs curtos como `11122233` que originalmente são `00011122233`). `normalizeCpfCnpj` restaura zeros com `padStart(11, "0")` (ou `14` dígitos para CNPJ), **preservando** valores compostos apenas por zeros (como `"0"` na conta órfã `CNT-108`) para não mascarar anomalias reais.
+2. **Zeros à esquerda removidos pelo Google Sheets:** células numéricas sem formatação de texto perdem zeros à esquerda (ex.: CPFs curtos como `11122233` que originalmente são `00011122233`). `normalizeCpfCnpj` restaura zeros com `padStart(11, "0")` (ou `14` dígitos para CNPJ — um valor curto só vira CNPJ se não for CPF válido e for CNPJ válido), **preservando** valores compostos apenas por zeros (como `"0"` na conta órfã `CNT-108`) para não mascarar anomalias reais.
 3. **Separação entre ingestão e cadastro:** `99` dos documentos da base de teste são fictícios (ex.: `11122233344`, `12345678000199`). Por isso, a leitura do CSV não descarta registros por dígito verificador, enquanto o formulário de **Novo Cliente** exige CPF/CNPJ matematicamente válido via `validators.ts`.
-4. **Datas sem deslocamento de fuso horário:** `parseDate` interpreta strings `YYYY-MM-DD` e `DD/MM/YYYY` usando construtor local `new Date(year, month - 1, day)` e valida overflow de calendário, evitando o recuo de `-1 dia` causado por `new Date("YYYY-MM-DD")` em UTC.
-5. **Números e domínios textuais flexíveis:** `parseNumber` trata tanto formato americano (`"85000.00"`, `"1,250.50"`) quanto brasileiro (`"R$ 1.250,50"`). `normalizeEstadoCivil` e `normalizeTipoConta` normalizam caixa, acentos e flexões de gênero (ex.: `"Solteira"` → `"Solteiro"`, `"Poupança"` / `"POUPANCA"` → `"poupanca"`).
-6. **Linhas inválidas e acessibilidade:** registros sem campos essenciais são ignorados com `console.warn` descritivo sem interromper o carregamento. Toda a interface adota WCAG 2.2 AA (`:focus-visible`, `tabular-nums`, elementos nativos `<button>`, `<Link>`, `<dialog>`, `prefers-reduced-motion`).
+4. **Datas sem deslocamento de fuso horário:** `parseDate` interpreta strings `YYYY-MM-DD` (inclusive com horário anexado, considerando só a data), `DD/MM/YYYY` e `YYYYMMDD` usando construtor local `new Date(year, month - 1, day)` e valida overflow de calendário, evitando o recuo de `-1 dia` causado por `new Date("YYYY-MM-DD")` em UTC.
+5. **Números e domínios textuais flexíveis:** `parseNumber` trata tanto formato americano (`"85000.00"`, `"1,250.50"`) quanto brasileiro (`"R$ 1.250,50"`, `"85.000"`) e retorna `null` para valores inválidos, que são registrados com `console.warn` em vez de virarem `0` silenciosamente. `normalizeEstadoCivil` e `normalizeTipoConta` normalizam caixa, acentos e flexões de gênero (ex.: `"Solteira"` → `"Solteiro"`, `"Poupança"` / `"POUPANCA"` → `"poupanca"`).
+6. **Linhas inválidas e acessibilidade:** registros sem campos essenciais são ignorados e IDs duplicados são descartados, ambos com `console.warn` descritivo sem interromper o carregamento. Toda a interface adota WCAG 2.2 AA (`:focus-visible`, `tabular-nums`, elementos nativos `<button>`, `<Link>`, `<dialog>`, `prefers-reduced-motion`).
 
 ---
 
@@ -80,6 +80,7 @@ A inspeção direta das planilhas vivas do Google Sheets revelou inconsistência
     │   ├── BankDataContext.tsx       # Estado em memória, carga inicial e addCliente
     │   └── useBankData.ts            # Hook de consumo do contexto
     ├── hooks/
+    │   ├── useBackdropClose.ts       # Fecha <dialog> só em clique iniciado e finalizado no backdrop
     │   └── useClientFilters.ts       # Busca textual/numérica, filtro CPF/CNPJ/agência e paginação
     ├── components/
     │   ├── AccountCard/              # Card interativo de conta com container queries e barra de limite
@@ -90,7 +91,7 @@ A inspeção direta das planilhas vivas do Google Sheets revelou inconsistência
     │   ├── DatePicker/               # Seletor de data acessível em português
     │   ├── Footer/                   # Rodapé institucional com canais de atendimento
     │   ├── Header/                   # Cabeçalho sticky com logo Banestes e ação "+ Novo Cliente"
-    │   ├── Pagination/               # Paginação acessível com janela fixa de 3 páginas
+    │   ├── Pagination/               # Paginação acessível com janela de 3 páginas e reticências
     │   ├── SearchToolbar/            # Busca, filtro de documento (CPF/CNPJ) e agência
     │   ├── SelectDropdown/           # Combobox/listbox acessível em popover
     │   └── StatusMessage/            # Loading skeleton, erro com retry e empty state
@@ -118,7 +119,7 @@ npm install
 npm run dev
 
 # 3. Validar tipagem TypeScript e lint (Oxlint)
-npx tsc --noEmit
+npx tsc --noEmit -p tsconfig.app.json
 npm run lint
 
 # 4. Gerar build de produção e pré-visualizar localmente

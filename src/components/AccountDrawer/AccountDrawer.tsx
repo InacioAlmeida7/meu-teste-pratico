@@ -1,8 +1,6 @@
-import { useEffect, useRef, type PointerEvent } from "react";
+import { useEffect, useRef } from "react";
 import {
   Building2,
-  ChevronLeft,
-  ChevronRight,
   CreditCard,
   Hash,
   IdCard,
@@ -11,6 +9,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { useBackdropClose } from "../../hooks/useBackdropClose";
 import type { Conta } from "../../types/models";
 import { formatCpfCnpj, formatCurrencyBRL } from "../../utils/formatters";
 import "./AccountDrawer.css";
@@ -27,8 +26,8 @@ interface AccountDrawerProps {
 
 /**
  * Painel lateral deslizante (Drawer) construído com `<dialog>` nativo (`showModal`/`close`),
- * exibindo detalhamento financeiro completo da conta selecionada e navegação rápida
- * entre todas as contas vinculadas ao mesmo cliente.
+ * exibindo detalhamento financeiro completo da conta selecionada e um seletor
+ * para alternar entre as contas vinculadas ao mesmo cliente.
  */
 export function AccountDrawer({
   isOpen,
@@ -40,10 +39,10 @@ export function AccountDrawer({
   onClose,
 }: AccountDrawerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const pressedOutsideRef = useRef(false);
+  const backdropHandlers = useBackdropClose(dialogRef, handleRequestClose);
 
-  const activeIndex = contas.findIndex((item) => item.id === activeAccountId);
-  const activeConta = activeIndex >= 0 ? contas[activeIndex] : contas[0];
+  const activeConta =
+    contas.find((item) => item.id === activeAccountId) ?? contas[0];
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -67,34 +66,6 @@ export function AccountDrawer({
     dialogRef.current?.close();
   }
 
-  function isPointerOutsideDrawer(
-    event: PointerEvent<HTMLDialogElement>,
-  ): boolean {
-    const dialog = dialogRef.current;
-    if (!dialog || event.target !== dialog) {
-      return false;
-    }
-    const rect = dialog.getBoundingClientRect();
-    return (
-      event.clientX < rect.left ||
-      event.clientX > rect.right ||
-      event.clientY < rect.top ||
-      event.clientY > rect.bottom
-    );
-  }
-
-  function handlePointerDown(event: PointerEvent<HTMLDialogElement>) {
-    pressedOutsideRef.current = isPointerOutsideDrawer(event);
-  }
-
-  function handlePointerUp(event: PointerEvent<HTMLDialogElement>) {
-    const wasOutside = pressedOutsideRef.current;
-    pressedOutsideRef.current = false;
-    if (wasOutside && isPointerOutsideDrawer(event)) {
-      handleRequestClose();
-    }
-  }
-
   const isCorrente = activeConta?.tipo === "corrente";
   const hasLimit = Boolean(activeConta && activeConta.limiteCredito > 0);
   const usedCredit =
@@ -116,12 +87,6 @@ export function AccountDrawer({
   const roundedUsedPercent = hasLimit ? 100 - roundedAvailablePercent : 0;
 
   const hasMultipleAccounts = contas.length > 1;
-  const previousAccount =
-    hasMultipleAccounts && activeIndex > 0 ? contas[activeIndex - 1] : null;
-  const nextAccount =
-    hasMultipleAccounts && activeIndex >= 0 && activeIndex < contas.length - 1
-      ? contas[activeIndex + 1]
-      : null;
 
   const balanceClass =
     !activeConta || activeConta.saldo === 0
@@ -136,8 +101,7 @@ export function AccountDrawer({
       className="account-drawer"
       aria-labelledby="account-drawer-title"
       onClose={onClose}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
+      {...backdropHandlers}
     >
       {activeConta ? (
         <div className="account-drawer__shell">
@@ -272,7 +236,7 @@ export function AccountDrawer({
                 <div className="account-drawer__credit-item">
                   <dt className="account-drawer__term">Percentual de Uso</dt>
                   <dd className="account-drawer__value tabular-nums">
-                    {hasLimit ? `${roundedUsedPercent}%` : "0%"}
+                    {hasLimit ? `${roundedUsedPercent}%` : "Sem limite"}
                   </dd>
                 </div>
               </dl>
@@ -392,37 +356,6 @@ export function AccountDrawer({
           </div>
 
           <footer className="account-drawer__footer">
-            {hasMultipleAccounts ? (
-              <div className="account-drawer__nav-group">
-                <button
-                  type="button"
-                  className="btn btn-secondary account-drawer__nav-btn"
-                  disabled={!previousAccount}
-                  onClick={() => {
-                    if (previousAccount) {
-                      onSelectAccount(previousAccount.id);
-                    }
-                  }}
-                >
-                  <ChevronLeft size={16} aria-hidden="true" />
-                  <span>Anterior</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary account-drawer__nav-btn"
-                  disabled={!nextAccount}
-                  onClick={() => {
-                    if (nextAccount) {
-                      onSelectAccount(nextAccount.id);
-                    }
-                  }}
-                >
-                  <span>Próxima</span>
-                  <ChevronRight size={16} aria-hidden="true" />
-                </button>
-              </div>
-            ) : null}
-
             <button
               type="button"
               className="btn btn-ghost"

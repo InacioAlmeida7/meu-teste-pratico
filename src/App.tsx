@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, X } from "lucide-react";
 import {
   Navigate,
@@ -10,12 +10,19 @@ import {
 import { ClientFormModal } from "./components/ClientFormModal/ClientFormModal";
 import { Footer } from "./components/Footer/Footer";
 import { Header } from "./components/Header/Header";
+import { StatusMessage } from "./components/StatusMessage/StatusMessage";
 import { BankDataProvider } from "./context/BankDataContext";
 import { useBankData } from "./context/useBankData";
-import { ClientDetailPage } from "./pages/ClientDetailPage/ClientDetailPage";
 import { ClientListPage } from "./pages/ClientListPage/ClientListPage";
 import type { Cliente } from "./types/models";
 import { onlyDigits } from "./utils/normalizers";
+
+// A tela de detalhe só é baixada ao abrir um cliente, mantendo o bundle inicial menor.
+const ClientDetailPage = lazy(() =>
+  import("./pages/ClientDetailPage/ClientDetailPage").then((module) => ({
+    default: module.ClientDetailPage,
+  })),
+);
 
 function AppLayout() {
   const { clientes, agencias, addCliente } = useBankData();
@@ -23,6 +30,8 @@ function AppLayout() {
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  // Trocar a `key` da listagem remonta a página e zera busca, filtros e paginação
+  // (padrão do React para resetar estado), exibindo o novo cliente no topo da página 1.
   const [listResetTick, setListResetTick] = useState(0);
 
   useEffect(() => {
@@ -37,7 +46,7 @@ function AppLayout() {
     };
   }, [successToast]);
 
-  const existingCpfs = useMemo(() => {
+  const existingDocuments = useMemo(() => {
     const set = new Set<string>();
     for (const cliente of clientes) {
       set.add(onlyDigits(cliente.cpfCnpj));
@@ -62,32 +71,49 @@ function AppLayout() {
       <Header onNewClient={() => setIsModalOpen(true)} />
 
       <main id="main-content" className="app-main" tabIndex={-1}>
-        {successToast ? (
-          <div className="container app-toast-wrap">
-            <div className="app-toast" role="status" aria-live="polite">
-              <div className="app-toast__body">
-                <CheckCircle2
-                  size={18}
-                  className="app-toast__icon"
-                  aria-hidden="true"
-                />
-                <p>{successToast}</p>
+        {/* A região `status` fica sempre montada: leitores de tela só anunciam
+            mudanças dentro de uma live region que já existia no DOM. */}
+        <div role="status">
+          {successToast ? (
+            <div className="container app-toast-wrap">
+              <div className="app-toast">
+                <div className="app-toast__body">
+                  <CheckCircle2
+                    size={18}
+                    className="app-toast__icon"
+                    aria-hidden="true"
+                  />
+                  <p>{successToast}</p>
+                </div>
+                <button
+                  type="button"
+                  className="app-toast__close"
+                  aria-label="Fechar notificação"
+                  onClick={() => setSuccessToast(null)}
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
               </div>
-              <button
-                type="button"
-                className="app-toast__close"
-                aria-label="Fechar notificação"
-                onClick={() => setSuccessToast(null)}
-              >
-                <X size={16} aria-hidden="true" />
-              </button>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
         <Routes>
           <Route path="/" element={<ClientListPage key={listResetTick} />} />
-          <Route path="/clientes/:id" element={<ClientDetailPage />} />
+          <Route
+            path="/clientes/:id"
+            element={
+              <Suspense
+                fallback={
+                  <div className="container">
+                    <StatusMessage variant="loading" />
+                  </div>
+                }
+              >
+                <ClientDetailPage />
+              </Suspense>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -98,7 +124,7 @@ function AppLayout() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         agencias={agencias}
-        existingCpfs={existingCpfs}
+        existingDocuments={existingDocuments}
         onCreateClient={handleCreateClient}
       />
     </div>

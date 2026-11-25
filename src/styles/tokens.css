@@ -3,8 +3,10 @@
  *
  * Todos os pares texto/superfície atendem contraste mínimo >= 4.5:1 (AA).
  * Tons verdes mais claros (--color-accent-green-graphic / --color-accent-green-bright)
- * são reservados estritamente a elementos gráficos (ícones e barras de crédito).
- * Botões verdes com texto branco utilizam --color-btn-green (#337A21, 5.29:1).
+ * são reservados estritamente a elementos gráficos (bordas e barras de crédito).
+ * Texto/ícones verdes usam --color-accent-green-text (#337A21): 5.32:1 sobre branco e
+ * >= 4.55:1 sobre todas as superfícies claras do tema. Botões verdes com texto branco
+ * usam --color-btn-green (mesmo #337A21, 5.32:1).
  */
 :root {
   /* Marca e Ação */
@@ -14,13 +16,13 @@
   --color-brand-secondary: #0070ba;
   --color-brand-hero-gradient: linear-gradient(
     135deg,
-    #0610b8 0%,
-    #0814dd 58%,
+    var(--color-brand-primary-dark) 0%,
+    var(--color-brand-primary) 58%,
     #0a22c4 100%
   );
-  --color-btn-green: #00AB16;
+  --color-btn-green: #337a21;
   --color-btn-green-hover: #286319;
-  --color-accent-green-text: #56AF31;
+  --color-accent-green-text: #337a21;
   --color-accent-green-graphic: #428726;
   --color-accent-green-bright: #56af31;
 
@@ -35,6 +37,14 @@
   --color-hero-muted: rgba(255, 255, 255, 0.88);
   --color-hero-surface: rgba(255, 255, 255, 0.12);
   --color-hero-border: rgba(255, 255, 255, 0.24);
+  --color-hero-surface-hover: rgba(255, 255, 255, 0.22);
+  --color-hero-border-strong: rgba(255, 255, 255, 0.45);
+  --color-hero-divider: rgba(255, 255, 255, 0.16);
+  --color-hero-panel-bg: rgba(4, 11, 108, 0.42);
+  --color-hero-positive: #7bf18e;
+  --color-hero-negative: #ffd4d0;
+  --color-overlay: rgba(17, 24, 39, 0.45);
+  --color-overlay-transparent: rgba(17, 24, 39, 0);
 
   /* Bordas */
   --color-border-subtle: #d2e2f2;
@@ -48,7 +58,6 @@
   --color-text-on-brand: #ffffff;
 
   /* Estados Semânticos */
-  --color-success-text: #3b7a22;
   --color-success-bg: #eff8eb;
   --color-success-border: #c5e2b8;
 
@@ -104,6 +113,5 @@
   /* Movimento e Camadas */
   --transition-fast: 150ms ease;
   --transition-base: 260ms cubic-bezier(0.4, 0, 0.2, 1);
-  --z-sticky: 10;
   --z-header: 100;
 }

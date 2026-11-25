@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { EstadoCivil } from "../types/models";
 import {
   cleanOptionalText,
+  getLocalToday,
   onlyDigits,
   parseDate,
   parseInteger,
@@ -17,34 +17,46 @@ export const ESTADO_CIVIL_OPTIONS = [
 ] as const;
 
 /**
- * Retorna a data local atual no formato `YYYY-MM-DD` para uso no atributo `max`
- * de `<input type="date">` e comparação sem deslocamento de fuso UTC.
+ * Aceita apenas dígitos, `.`, `,`, `-` e prefixo `R$` (evita que `"12abc"` vire 12)
+ * e delega a interpretação BR/US a `parseNumber`.
  */
-export function getTodayLocalIso(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function parseMoneyInput(rawValue: string): number | null {
-  const trimmed = rawValue.trim();
-  if (!trimmed) {
+  const sanitized = rawValue.replace(/\s+/g, "");
+  if (!/^(?:R\$)?-?[\d.,]+$/i.test(sanitized)) {
     return null;
   }
-
-  const sanitized = trimmed.replace(/\s+/g, "");
-  if (!/^(?:R\$)?-?[\d.,]+$/i.test(sanitized) || !/\d/.test(sanitized)) {
-    return null;
-  }
-
-  return parseNumber(trimmed);
+  return parseNumber(sanitized);
 }
 
-function getLocalTodayStart(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+/**
+ * Campo monetário obrigatório e não negativo. Cada valor é convertido uma única vez;
+ * `z.NEVER` interrompe a transformação quando há erro.
+ */
+function moneyField(messages: { required: string; invalid: string; negative: string }) {
+  return z
+    .string()
+    .trim()
+    .min(1, messages.required)
+    .transform((value, ctx) => {
+      const parsed = parseMoneyInput(value);
+      if (parsed === null) {
+        ctx.issues.push({
+          code: "custom",
+          message: messages.invalid,
+          input: value,
+        });
+        return z.NEVER;
+      }
+      if (parsed < 0) {
+        ctx.issues.push({
+          code: "custom",
+          message: messages.negative,
+          input: value,
+        });
+        return z.NEVER;
+      }
+      return parsed;
+    });
 }
 
 /**
@@ -85,23 +97,27 @@ export const clienteSchema = z.object({
     .string()
     .trim()
     .min(1, "Informe a data de nascimento.")
-    .refine(
-      (value) => /^(?:\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})$/.test(value),
-      "Informe uma data válida no formato DD/MM/AAAA.",
-    )
-    .refine(
-      (value) => !Number.isNaN(parseDate(value).getTime()),
-      "Data de nascimento inválida.",
-    )
-    .refine(
-      (value) => parseDate(value).getFullYear() >= 1900,
-      "A data de nascimento não pode ser anterior a 1900.",
-    )
-    .refine(
-      (value) => parseDate(value).getTime() <= getLocalTodayStart().getTime(),
-      "A data de nascimento não pode ser futura.",
-    )
-    .transform((value) => parseDate(value)),
+    .transform((value, ctx) => {
+      const fail = (message: string) => {
+        ctx.issues.push({ code: "custom", message, input: value });
+        return z.NEVER;
+      };
+
+      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+        return fail("Informe uma data válida no formato DD/MM/AAAA.");
+      }
+      const date = parseDate(value);
+      if (Number.isNaN(date.getTime())) {
+        return fail("Data de nascimento inválida.");
+      }
+      if (date.getFullYear() < 1900) {
+        return fail("A data de nascimento não pode ser anterior a 1900.");
+      }
+      if (date.getTime() > getLocalToday().getTime()) {
+        return fail("A data de nascimento não pode ser futura.");
+      }
+      return date;
+    }),
 
   email: z
     .string()
@@ -116,39 +132,19 @@ export const clienteSchema = z.object({
 
   estadoCivil: z
     .string()
-    .refine(
-      (value): value is EstadoCivil =>
-        (ESTADO_CIVIL_OPTIONS as readonly string[]).includes(value),
-      "Selecione um estado civil válido.",
-    ),
+    .pipe(z.enum(ESTADO_CIVIL_OPTIONS, "Selecione um estado civil válido.")),
 
-  rendaAnual: z
-    .string()
-    .trim()
-    .min(1, "Informe a renda anual.")
-    .refine(
-      (value) => parseMoneyInput(value) !== null,
-      "Informe um valor numérico válido para a renda anual.",
-    )
-    .refine((value) => {
-      const parsed = parseMoneyInput(value);
-      return parsed !== null && parsed >= 0;
-    }, "A renda anual não pode ser negativa.")
-    .transform((value) => parseMoneyInput(value) ?? 0),
+  rendaAnual: moneyField({
+    required: "Informe a renda anual.",
+    invalid: "Informe um valor numérico válido para a renda anual.",
+    negative: "A renda anual não pode ser negativa.",
+  }),
 
-  patrimonio: z
-    .string()
-    .trim()
-    .min(1, "Informe o patrimônio.")
-    .refine(
-      (value) => parseMoneyInput(value) !== null,
-      "Informe um valor numérico válido para o patrimônio.",
-    )
-    .refine((value) => {
-      const parsed = parseMoneyInput(value);
-      return parsed !== null && parsed >= 0;
-    }, "O patrimônio não pode ser negativo.")
-    .transform((value) => parseMoneyInput(value) ?? 0),
+  patrimonio: moneyField({
+    required: "Informe o patrimônio.",
+    invalid: "Informe um valor numérico válido para o patrimônio.",
+    negative: "O patrimônio não pode ser negativo.",
+  }),
 
   codigoAgencia: z
     .string()

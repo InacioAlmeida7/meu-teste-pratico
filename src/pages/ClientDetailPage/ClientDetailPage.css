@@ -65,11 +65,12 @@
 }
 
 .detail-hero__back-link:hover {
-  background-color: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.45);
+  background-color: var(--color-hero-surface-hover);
+  border-color: var(--color-hero-border-strong);
 }
 
-.detail-hero__back-link:focus-visible {
+/* O contorno azul padrão some sobre o gradiente azul; no hero o foco fica branco. */
+.detail-hero :focus-visible {
   outline-color: var(--color-hero-text);
 }
 
@@ -155,9 +156,9 @@
 .hero-kpi-strip {
   display: grid;
   grid-template-columns: 1fr;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid var(--color-hero-border);
   border-radius: var(--radius-lg);
-  background-color: rgba(4, 11, 108, 0.42);
+  background-color: var(--color-hero-panel-bg);
   backdrop-filter: blur(8px);
   overflow: hidden;
 }
@@ -166,7 +167,7 @@
   display: grid;
   gap: var(--space-1);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid var(--color-hero-divider);
 }
 
 .hero-kpi:last-child {
@@ -177,7 +178,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--color-hero-muted);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   letter-spacing: 0.03em;
@@ -186,11 +187,11 @@
 
 .hero-kpi__icon {
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-hero-muted);
 }
 
 .hero-kpi__icon--green {
-  color: #7bf18e;
+  color: var(--color-hero-positive);
 }
 
 .hero-kpi__value {
@@ -201,15 +202,15 @@
 }
 
 .hero-kpi__value--positive {
-  color: #7bf18e;
+  color: var(--color-hero-positive);
 }
 
 .hero-kpi__value--negative {
-  color: #ffd4d0;
+  color: var(--color-hero-negative);
 }
 
 .hero-kpi__sub {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--color-hero-muted);
   font-size: var(--text-xs);
 }
 
@@ -319,7 +320,7 @@
 }
 
 .detail-tabs__tab:hover {
-  background-color: rgba(8, 20, 221, 0.05);
+  background-color: var(--color-bg-subtle);
   color: var(--color-brand-primary);
 }
 
@@ -561,18 +562,6 @@
   color: var(--color-warning-text);
 }
 
-.detail-overview__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-5) var(--space-4);
-  border: 1px dashed var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg-surface);
-  text-align: center;
-}
-
 .detail-overview__accounts-list {
   display: grid;
   gap: var(--space-3);
@@ -759,7 +748,7 @@
 
   .hero-kpi {
     border-bottom: 0;
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.16);
+    border-inline-end: 1px solid var(--color-hero-divider);
   }
 
   .hero-kpi:last-child {
