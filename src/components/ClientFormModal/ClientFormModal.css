@@ -52,7 +52,7 @@
 }
 
 .client-modal::backdrop {
-  background-color: rgba(17, 24, 39, 0);
+  background-color: var(--color-overlay-transparent);
   backdrop-filter: blur(2px);
   overflow: hidden;
   overscroll-behavior: contain;
@@ -63,12 +63,12 @@
 }
 
 .client-modal[open]::backdrop {
-  background-color: rgba(17, 24, 39, 0.48);
+  background-color: var(--color-overlay);
 }
 
 @starting-style {
   .client-modal[open]::backdrop {
-    background-color: rgba(17, 24, 39, 0);
+    background-color: var(--color-overlay-transparent);
   }
 }
 
@@ -199,15 +199,6 @@
 
 .client-modal__error {
   color: var(--color-error-text);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-}
-
-.client-modal__warning {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--color-warning-text);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
 }

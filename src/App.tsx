@@ -1,43 +1,66 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, X } from "lucide-react";
 import {
+  Link,
   Navigate,
   Route,
   Routes,
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { ClientFormModal } from "./components/ClientFormModal/ClientFormModal";
 import { Footer } from "./components/Footer/Footer";
 import { Header } from "./components/Header/Header";
+import { StatusMessage } from "./components/StatusMessage/StatusMessage";
 import { BankDataProvider } from "./context/BankDataContext";
 import { useBankData } from "./context/useBankData";
-import { ClientDetailPage } from "./pages/ClientDetailPage/ClientDetailPage";
 import { ClientListPage } from "./pages/ClientListPage/ClientListPage";
 import type { Cliente } from "./types/models";
 import { onlyDigits } from "./utils/normalizers";
+
+// Detalhe e formulário (React Hook Form + Zod + calendário) só são baixados quando usados,
+// mantendo o bundle inicial menor.
+const ClientDetailPage = lazy(() =>
+  import("./pages/ClientDetailPage/ClientDetailPage").then((module) => ({
+    default: module.ClientDetailPage,
+  })),
+);
+const ClientFormModal = lazy(() =>
+  import("./components/ClientFormModal/ClientFormModal").then((module) => ({
+    default: module.ClientFormModal,
+  })),
+);
+
+const TOAST_DURATION_MS = 7000;
 
 function AppLayout() {
   const { clientes, agencias, addCliente } = useBankData();
   const navigate = useNavigate();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
-  const [listResetTick, setListResetTick] = useState(0);
+  // Após a primeira abertura o modal permanece montado (o `<dialog>` só é exibido via `showModal`).
+  const [hasOpenedModal, setHasOpenedModal] = useState(false);
+  const [createdCliente, setCreatedCliente] = useState<Cliente | null>(null);
+  // Enquanto o usuário está com o mouse ou o foco no aviso, o tempo para (WCAG 2.2.1).
+  const [isToastPaused, setIsToastPaused] = useState(false);
 
   useEffect(() => {
-    if (!successToast) {
+    if (!createdCliente || isToastPaused) {
       return;
     }
     const timer = window.setTimeout(() => {
-      setSuccessToast(null);
-    }, 7000);
+      setCreatedCliente(null);
+    }, TOAST_DURATION_MS);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [successToast]);
+  }, [createdCliente, isToastPaused]);
 
-  const existingCpfs = useMemo(() => {
+  function closeToast() {
+    setCreatedCliente(null);
+    setIsToastPaused(false);
+  }
+
+  const existingDocuments = useMemo(() => {
     const set = new Set<string>();
     for (const cliente of clientes) {
       set.add(onlyDigits(cliente.cpfCnpj));
@@ -47,10 +70,7 @@ function AppLayout() {
 
   function handleCreateClient(novoCliente: Cliente) {
     addCliente(novoCliente);
-    setListResetTick((prev) => prev + 1);
-    setSuccessToast(
-      "Cliente cadastrado com sucesso (armazenado em memória até o recarregamento da página).",
-    );
+    setCreatedCliente(novoCliente);
 
     if (location.pathname !== "/") {
       void navigate("/");
@@ -59,48 +79,95 @@ function AppLayout() {
 
   return (
     <div className="app-shell">
-      <Header onNewClient={() => setIsModalOpen(true)} />
+      <Header
+        onNewClient={() => {
+          setHasOpenedModal(true);
+          setIsModalOpen(true);
+        }}
+      />
 
       <main id="main-content" className="app-main" tabIndex={-1}>
-        {successToast ? (
-          <div className="container app-toast-wrap">
-            <div className="app-toast" role="status" aria-live="polite">
+        {/* A região `status` fica sempre montada: leitores de tela só anunciam
+            mudanças dentro de uma live region que já existia no DOM. */}
+        <div role="status">
+          {createdCliente ? (
+            <div
+              className="app-toast"
+              onMouseEnter={() => setIsToastPaused(true)}
+              onMouseLeave={() => setIsToastPaused(false)}
+              onFocus={() => setIsToastPaused(true)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setIsToastPaused(false);
+                }
+              }}
+            >
+              <CheckCircle2
+                size={18}
+                className="app-toast__icon"
+                aria-hidden="true"
+              />
               <div className="app-toast__body">
-                <CheckCircle2
-                  size={18}
-                  className="app-toast__icon"
-                  aria-hidden="true"
-                />
-                <p>{successToast}</p>
+                <p className="app-toast__title">
+                  Cliente cadastrado com sucesso
+                </p>
+                <p className="app-toast__text">
+                  {createdCliente.nome} fica salvo em memória até recarregar a
+                  página.
+                </p>
+                <Link
+                  to={`/clientes/${encodeURIComponent(createdCliente.id)}`}
+                  className="app-toast__link"
+                  onClick={closeToast}
+                >
+                  Ver cliente
+                </Link>
               </div>
               <button
                 type="button"
                 className="app-toast__close"
                 aria-label="Fechar notificação"
-                onClick={() => setSuccessToast(null)}
+                onClick={closeToast}
               >
                 <X size={16} aria-hidden="true" />
               </button>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
         <Routes>
-          <Route path="/" element={<ClientListPage key={listResetTick} />} />
-          <Route path="/clientes/:id" element={<ClientDetailPage />} />
+          <Route path="/" element={<ClientListPage />} />
+          <Route
+            path="/clientes/:id"
+            element={
+              <Suspense
+                fallback={
+                  <div className="container">
+                    <StatusMessage variant="loading" />
+                  </div>
+                }
+              >
+                <ClientDetailPage />
+              </Suspense>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
       <Footer />
 
-      <ClientFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        agencias={agencias}
-        existingCpfs={existingCpfs}
-        onCreateClient={handleCreateClient}
-      />
+      {hasOpenedModal ? (
+        <Suspense fallback={null}>
+          <ClientFormModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            agencias={agencias}
+            existingDocuments={existingDocuments}
+            onCreateClient={handleCreateClient}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

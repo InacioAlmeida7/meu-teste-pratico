@@ -2,6 +2,8 @@ import { Headphones, Phone, ShieldCheck, Volume2 } from "lucide-react";
 import logoBanestesWhite from "../../assets/logo-original-white.png";
 import "./Footer.css";
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 const INSTITUTIONAL_CHANNELS = [
   {
     id: "central",
@@ -72,7 +74,7 @@ export function Footer() {
             height="32"
           />
           <p className="site-footer__copy">
-            © 2026 Portal de Gestão de Clientes Bancários · Interface demonstrativa
+            © {CURRENT_YEAR} Portal de Gestão de Clientes Bancários · Interface demonstrativa
           </p>
         </div>
       </div>

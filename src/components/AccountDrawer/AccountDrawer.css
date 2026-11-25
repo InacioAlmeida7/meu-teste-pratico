@@ -56,7 +56,7 @@
 }
 
 .account-drawer::backdrop {
-  background-color: rgba(17, 24, 39, 0);
+  background-color: var(--color-overlay-transparent);
   backdrop-filter: blur(2px);
   overflow: hidden;
   overscroll-behavior: contain;
@@ -67,12 +67,12 @@
 }
 
 .account-drawer[open]::backdrop {
-  background-color: rgba(17, 24, 39, 0.45);
+  background-color: var(--color-overlay);
 }
 
 @starting-style {
   .account-drawer[open]::backdrop {
-    background-color: rgba(17, 24, 39, 0);
+    background-color: var(--color-overlay-transparent);
   }
 }
 
@@ -471,19 +471,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-2);
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-border-divider);
   background-color: var(--color-bg-table-head);
-}
-
-.account-drawer__nav-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.account-drawer__nav-btn {
-  padding-inline: var(--space-3);
 }

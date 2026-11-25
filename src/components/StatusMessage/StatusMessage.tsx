@@ -15,7 +15,7 @@ const SKELETON_ROWS = [1, 2, 3, 4, 5, 6];
  * Componente unificado para estados assíncronos e vazios:
  * - `loading`: esqueleto tabular fiel à densidade da listagem
  * - `error`: alerta acessível (`role="alert"`) com ação de recuperação
- * - `empty`: aviso com `aria-live="polite"` quando nenhum cliente é encontrado
+ * - `empty`: aviso visual de lista vazia (o anúncio fica na live region da listagem)
  */
 export function StatusMessage({
   variant,
@@ -75,7 +75,6 @@ export function StatusMessage({
           : "status-panel status-panel--empty"
       }
       role={isError ? "alert" : undefined}
-      aria-live={isError ? undefined : "polite"}
     >
       <div className="status-panel__icon" aria-hidden="true">
         {isError ? <AlertCircle size={24} /> : <SearchX size={24} />}

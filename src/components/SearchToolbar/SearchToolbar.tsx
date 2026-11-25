@@ -1,6 +1,9 @@
 import { useMemo } from "react";
-import { Building2, IdCard, Search, X } from "lucide-react";
-import type { DocumentTypeFilter } from "../../hooks/useClientFilters";
+import { ArrowUpDown, Building2, IdCard, Search, X } from "lucide-react";
+import type {
+  DocumentTypeFilter,
+  SortDirection,
+} from "../../hooks/useClientFilters";
 import type { Agencia } from "../../types/models";
 import {
   SelectDropdown,
@@ -16,6 +19,8 @@ interface SearchToolbarProps {
   selectedAgencia: string;
   onAgenciaChange: (value: string) => void;
   agencias: Agencia[];
+  sortDirection: SortDirection;
+  onSortDirectionChange: (value: SortDirection) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
 }
@@ -33,9 +38,15 @@ function parseDocumentType(value: string): DocumentTypeFilter {
   return "all";
 }
 
+// No mobile o cabeçalho da tabela fica oculto (cards); este select oferece a mesma ordenação.
+const SORT_OPTIONS: SelectOption[] = [
+  { value: "asc", label: "Nome (A–Z)" },
+  { value: "desc", label: "Nome (Z–A)" },
+];
+
 /**
  * Barra de consulta e filtros (tipo de documento CPF/CNPJ e agência)
- * com labels explícitos e dropdowns customizados.
+ * com labels explícitos e dropdowns customizados; no mobile inclui "Ordenar por".
  * O botão principal "Novo Cliente" fica centralizado no Header institucional.
  */
 export function SearchToolbar({
@@ -46,6 +57,8 @@ export function SearchToolbar({
   selectedAgencia,
   onAgenciaChange,
   agencias,
+  sortDirection,
+  onSortDirectionChange,
   hasActiveFilters,
   onClearFilters,
 }: SearchToolbarProps) {
@@ -124,6 +137,23 @@ export function SearchToolbar({
             placeholder="Todas as agências"
             leadingIcon={<Building2 size={17} />}
             listboxLabel="Filtrar por agência"
+          />
+        </div>
+
+        <div className="search-toolbar__field search-toolbar__field--sort">
+          <label htmlFor="sort-select" className="search-toolbar__label">
+            Ordenar por
+          </label>
+          <SelectDropdown
+            id="sort-select"
+            value={sortDirection}
+            onChange={(nextValue) =>
+              onSortDirectionChange(nextValue === "desc" ? "desc" : "asc")
+            }
+            options={SORT_OPTIONS}
+            placeholder="Nome (A–Z)"
+            leadingIcon={<ArrowUpDown size={17} />}
+            listboxLabel="Ordenar clientes"
           />
         </div>
       </div>

@@ -79,7 +79,7 @@ O parsing das strings CSV deve ser feito com **PapaParse** (`{ header: true, ski
    * Ao pesquisar clientes por CPF/CNPJ (permitindo busca com ou sem máscara).
 3. **Datas (`parseDate`)**: Suportar múltiplos formatos reais (`DD/MM/YYYY`, `YYYY-MM-DD`, timestamps ou strings ISO), construindo o `Date` sem deslocamento de fuso horário (ex.: usar construtor local `new Date(year, month - 1, day)` para datas sem hora). Se a data for inválida, tratar de forma segura sem quebrar a renderização.
 4. **Números e Moeda (`parseNumber`)**: Suportar strings com formato brasileiro (`"1.250,50"`), formato americano (`"1250.50"`), prefixos como `"R$"` ou espaços. Se vier vazio ou inválido, retornar `0` (ou descartar/alertar conforme a criticidade do campo).
-5. **Estado Civil (`normalizeEstadoCivil`)**: Normalizar caixa (maiúsculas/minúsculas), espaços e acentos para mapear estritamente para `"Solteiro" | "Casado" | "Viúvo" | "Divorciado"` (inclusive tratando variações femininas como `"Solteira"` → `"Solteiro"`, caso apareçam na planilha).
+5. **Estado Civil (`normalizeEstadoCivil`)**: Normalizar caixa (maiúsculas/minúsculas), espaços e acentos para mapear estritamente para `"Solteiro" | "Casado" | "Viúvo" | "Divorciado"` (inclusive tratando variações femininas como `"Solteira"` → `"Solteiro"`, caso apareçam na planilha). Valores vazios ou não reconhecidos não recebem um estado civil inventado: o campo fica ausente (`estadoCivil?` em `models.ts`) e a tela exibe `"Não informado"`.
 6. **Tipo de Conta (`normalizeTipoConta`)**: Normalizar caixa/acentos (ex.: `"Poupança"`, `"POUPANCA"`, `"Corrente"`) para `"corrente" | "poupanca"`.
 7. **Tratamento de anomalias:**
    * Se uma linha do CSV vier sem campos essenciais (ex.: `nome` ou `cpfCnpj` vazio), ignorar a linha com segurança e registrar um `console.warn` descritivo (sem derrubar a aplicação).
@@ -146,7 +146,8 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Campo de busca único com `<label>` acessível: filtra em tempo real por **Nome**, **Nome Social** ou **CPF/CNPJ** (com ou sem pontuação, ignorando acentos e maiúsculas/minúsculas).
    * Filtro complementar por **Agência** (dropdown preenchido dinamicamente a partir das agências carregadas, com opção "Todas as agências").
    * Botão "Limpar filtros" exibido quando há busca ou filtro ativo.
-   * **Regra obrigatória:** Qualquer alteração na busca ou filtro deve resetar automaticamente a página atual para **1**.
+   * **Ordenação por nome:** o cabeçalho **Nome** é um botão que alterna A–Z / Z–A (`aria-sort`). Padrão: A–Z, ordem alfabética pt-BR sem diferenciar acentos. No mobile, onde o cabeçalho fica oculto, um campo "Ordenar por" oferece as mesmas duas opções.
+   * **Regra obrigatória:** Qualquer alteração na busca, filtro ou ordenação deve resetar automaticamente a página atual para **1**.
 3. **Listagem Responsiva (`ClientList`):**
    * Exibir apenas os dados principais: **Nome** (com indicador discreto de Nome Social se houver), **CPF/CNPJ formatado**, **E-mail**, **Agência** (código/nome) e botão/ação **"Ver detalhes"**.
    * **Desktop (`>= 768px`):** Tabela HTML semântica (`<table>`, `<thead>`, `<th scope="col">`, `<caption>` com `.sr-only`), linhas clicáveis ou com ação clara.
@@ -158,35 +159,35 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
 5. **Feedback visual:**
    * Skeleton/estado de carregamento durante a requisição inicial.
    * Mensagem de erro amigável com botão **"Tentar novamente"** caso falhe a comunicação com o Google Sheets.
-   * Mensagem com `aria-live="polite"` quando nenhum cliente corresponder à busca.
+   * Empty state quando nenhum cliente corresponder à busca; a contagem de resultados é anunciada por uma região `role="status"` persistente.
 
 ### Modal de Cadastro de Novo Cliente (`ClientFormModal`)
 1. **Comportamento do Modal:**
-   * Implementado com o elemento HTML nativo `<dialog>` (`showModal()` / `close()`), garantindo bloqueio de fundo (backdrop), fechamento via tecla `Esc`, clique no botão fechar e retorno automático de foco ao botão acionador.
+   * Implementado com o elemento HTML nativo `<dialog>` (`showModal()` / `close()`), garantindo bloqueio de fundo (backdrop), fechamento via tecla `Esc`, clique no botão fechar ou no backdrop e retorno automático de foco ao botão acionador.
    * Rolagem interna limpa em telas menores (mobile) sem cortar os botões de ação.
 2. **Campos do Formulário (respeitando `Cliente`):**
    * `nome` (obrigatório, mín. 3 caracteres)
    * `nomeSocial` (opcional)
-   * `cpfCnpj` (obrigatório, 11 ou 14 dígitos, com validação de formato/dígitos verificadores e verificação opcional de duplicidade com aviso amigável)
+   * `cpfCnpj` (obrigatório, 11 ou 14 dígitos, com validação de formato/dígitos verificadores e bloqueio de duplicidade com registros existentes)
    * `rg` (opcional)
-   * `dataNascimento` (obrigatório, input `type="date"`, não pode ser data futura nem anterior a 1900)
+   * `dataNascimento` (obrigatório, `DatePicker` customizado no formato `DD/MM/AAAA`, não pode ser data futura nem anterior a 1900)
    * `email` (obrigatório, e-mail válido)
    * `endereco` (obrigatório, mín. 5 caracteres)
-   * `estadoCivil` (obrigatório, `<select>` com `"Solteiro" | "Casado" | "Viúvo" | "Divorciado"`)
+   * `estadoCivil` (obrigatório, `SelectDropdown` customizado com `"Solteiro" | "Casado" | "Viúvo" | "Divorciado"`)
    * `rendaAnual` (obrigatório, número `>= 0`)
    * `patrimonio` (obrigatório, número `>= 0`)
-   * `codigoAgencia` (obrigatório, `<select>` populado com as agências carregadas da planilha exibindo `Código - Nome`)
+   * `codigoAgencia` (obrigatório, `SelectDropdown` customizado populado com as agências carregadas da planilha exibindo `Código - Nome`)
 3. **Submissão em Memória:**
    * Validação via **React Hook Form + Zod**.
    * Gera `id` no front-end com `crypto.randomUUID()`.
    * Converte `dataNascimento` para objeto `Date` válido (sem erro de fuso horário).
-   * Insere o novo cliente no início da lista em memória (`BankDataContext`), fecha o modal, reseta o formulário e exibe uma notificação temporária acessível (`role="status"`): *"Cliente cadastrado com sucesso (armazenado em memória até o recarregamento da página)."*
+   * Insere o novo cliente na lista em memória (`BankDataContext`), limpa os filtros (ele aparece na sua posição conforme a ordenação ativa), fecha o modal, reseta o formulário e exibe uma notificação acessível (`role="status"`) no canto inferior direito, com link **"Ver cliente"**. Ela some sozinha após 7 s, com o tempo pausado enquanto o mouse ou o foco estiverem sobre ela.
 
 ### Rota `/clientes/:id` — Detalhes do Cliente (`ClientDetailPage`)
 1. **Navegação:** Link/botão **"← Voltar para a lista"** no topo. Se o `id` da URL não existir (ex.: cliente recém-cadastrado após F5), exibir estado "Cliente não encontrado" com botão para voltar à listagem.
-2. **Seção 1 — Dados Cadastrais Completos:** Exibir todas as propriedades do cliente (`nome`, `nomeSocial` se houver, `cpfCnpj`, `rg` ou `"Não informado"`, `dataNascimento` formatada, `estadoCivil`, `email`, `endereco`, `rendaAnual` e `patrimonio` formatados em BRL).
+2. **Seção 1 — Dados Cadastrais Completos:** Exibir todas as propriedades do cliente (`nome`, `nomeSocial` se houver, `cpfCnpj`, `rg` ou `"Não informado"`, `dataNascimento` formatada, `estadoCivil` ou `"Não informado"`, `email`, `endereco`, `rendaAnual` e `patrimonio` formatados em BRL).
 3. **Seção 2 — Agência Vinculada (`AgencyCard`):** Cruzamento via `cliente.codigoAgencia === agencia.codigo`. Exibir `nome`, `codigo`, `endereco` e `id`.
-4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Para cada conta, exibir:
+4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Arranjo: 1 a 3 contas em cards lado a lado, 4 contas em grade 2×2 e 5 ou mais em lista compacta. Para cada conta, exibir:
    * Badge diferenciando **Conta Corrente** e **Conta Poupança**;
    * **Saldo** (destaque visual sutil para saldo positivo vs. negativo);
    * **Limite de Crédito** e **Crédito Disponível** (com barra visual simples em CSS mostrando proporção utilizada/disponível quando `limiteCredito > 0`).

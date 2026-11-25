@@ -6,21 +6,28 @@ export const PAGE_SIZE = 10;
 
 export type DocumentTypeFilter = "all" | "cpf" | "cnpj";
 
+/** Direção da ordenação por nome; a listagem sempre começa em A–Z. */
+export type SortDirection = "asc" | "desc";
+
+// Ordem alfabética pt-BR ignorando acentos e caixa ("Álvaro" junto de "Alvaro").
+const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
+
 export interface ClientFiltersResult {
   searchQuery: string;
   selectedAgencia: string;
   documentType: DocumentTypeFilter;
+  sortDirection: SortDirection;
   currentPage: number;
   totalPages: number;
   totalItems: number;
   startItem: number;
   endItem: number;
   hasActiveFilters: boolean;
-  filteredClientes: Cliente[];
   paginatedClientes: Cliente[];
   setSearchQuery: (value: string) => void;
   setSelectedAgencia: (value: string) => void;
   setDocumentType: (value: DocumentTypeFilter) => void;
+  setSortDirection: (value: SortDirection) => void;
   setCurrentPage: (page: number) => void;
   clearFilters: () => void;
 }
@@ -59,16 +66,30 @@ function matchesSearchQuery(
 
 /**
  * Gerencia busca textual/documento, filtro de tipo de documento (CPF/CNPJ),
- * filtro de agência e paginação de até 10 itens por página.
- * Qualquer mudança nos critérios de busca ou filtro reinicia a página atual para 1,
- * evitando páginas vazias após refinar a consulta.
+ * filtro de agência, ordenação por nome e paginação de até 10 itens por página.
+ * Qualquer mudança nos critérios de busca, filtro ou ordenação reinicia a página para 1,
+ * evitando páginas vazias após refinar a consulta. Quando a base cresce (novo cadastro),
+ * os filtros também são limpos para o cliente recém-criado não ficar oculto.
  */
 export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
   const [searchQuery, setSearchQueryState] = useState<string>("");
   const [selectedAgencia, setSelectedAgenciaState] = useState<string>("");
   const [documentType, setDocumentTypeState] =
     useState<DocumentTypeFilter>("all");
+  const [sortDirection, setSortDirectionState] = useState<SortDirection>("asc");
   const [currentPage, setCurrentPageState] = useState<number>(1);
+  const [knownCount, setKnownCount] = useState<number>(clientes.length);
+
+  // Ajuste de estado durante o render (padrão recomendado pelo React em vez de useEffect).
+  if (clientes.length !== knownCount) {
+    setKnownCount(clientes.length);
+    if (clientes.length > knownCount) {
+      setSearchQueryState("");
+      setSelectedAgenciaState("");
+      setDocumentTypeState("all");
+      setCurrentPageState(1);
+    }
+  }
 
   const setSearchQuery = useCallback((value: string) => {
     setSearchQueryState(value);
@@ -82,6 +103,11 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
 
   const setDocumentType = useCallback((value: DocumentTypeFilter) => {
     setDocumentTypeState(value);
+    setCurrentPageState(1);
+  }, []);
+
+  const setSortDirection = useCallback((value: SortDirection) => {
+    setSortDirectionState(value);
     setCurrentPageState(1);
   }, []);
 
@@ -118,6 +144,13 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     });
   }, [clientes, searchQuery, selectedAgencia, documentType]);
 
+  const sortedClientes = useMemo(() => {
+    const factor = sortDirection === "asc" ? 1 : -1;
+    return [...filteredClientes].sort(
+      (a, b) => factor * collator.compare(a.nome, b.nome),
+    );
+  }, [filteredClientes, sortDirection]);
+
   const totalItems = filteredClientes.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
@@ -132,8 +165,8 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
 
   const paginatedClientes = useMemo(() => {
     const startIndex = (safePage - 1) * PAGE_SIZE;
-    return filteredClientes.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredClientes, safePage]);
+    return sortedClientes.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [sortedClientes, safePage]);
 
   const startItem = totalItems === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const endItem =
@@ -147,17 +180,18 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     searchQuery,
     selectedAgencia,
     documentType,
+    sortDirection,
     currentPage: safePage,
     totalPages,
     totalItems,
     startItem,
     endItem,
     hasActiveFilters,
-    filteredClientes,
     paginatedClientes,
     setSearchQuery,
     setSelectedAgencia,
     setDocumentType,
+    setSortDirection,
     setCurrentPage,
     clearFilters,
   };

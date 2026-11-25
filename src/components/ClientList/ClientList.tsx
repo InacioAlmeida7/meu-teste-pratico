@@ -1,5 +1,13 @@
-import { Building2, ChevronRight, Mail } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Building2,
+  ChevronRight,
+  Mail,
+} from "lucide-react";
 import { Link } from "react-router-dom";
+import type { SortDirection } from "../../hooks/useClientFilters";
 import type { Agencia, Cliente } from "../../types/models";
 import { formatCpfCnpj } from "../../utils/formatters";
 import { onlyDigits } from "../../utils/normalizers";
@@ -8,18 +16,51 @@ import "./ClientList.css";
 interface ClientListProps {
   clientes: Cliente[];
   agenciaMap: Map<number, Agencia>;
+  sortDirection: SortDirection;
+  onSortDirectionChange: (direction: SortDirection) => void;
 }
 
 /**
  * Listagem responsiva de clientes com tabela semântica única:
  * no desktop (>= 768px) exibe tabela tabular com destaque visual de tipo PF/PJ e hover fluido;
  * no mobile (< 768px) transforma as linhas em cards empilhados com rótulos CSS.
+ * O cabeçalho "Nome" é um botão que alterna a ordem A–Z / Z–A (`aria-sort`).
  */
-export function ClientList({ clientes, agenciaMap }: ClientListProps) {
+export function ClientList({
+  clientes,
+  agenciaMap,
+  sortDirection,
+  onSortDirectionChange,
+}: ClientListProps) {
+  const SortIcon = sortDirection === "asc" ? ArrowUp : ArrowDown;
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
+
+  // A região só entra na ordem de Tab quando há rolagem horizontal a fazer pelo teclado
+  // (tabela larga); nos cards do mobile seria uma parada de foco inútil.
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      setIsScrollable(wrapper.scrollWidth > wrapper.clientWidth);
+    });
+    observer.observe(wrapper);
+    if (wrapper.firstElementChild) {
+      observer.observe(wrapper.firstElementChild);
+    }
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div
+      ref={wrapperRef}
       className="client-list-wrapper"
-      tabIndex={0}
+      tabIndex={isScrollable ? 0 : undefined}
       role="region"
       aria-labelledby="client-table-caption"
     >
@@ -29,7 +70,23 @@ export function ClientList({ clientes, agenciaMap }: ClientListProps) {
         </caption>
         <thead>
           <tr>
-            <th scope="col">Cliente</th>
+            <th
+              scope="col"
+              aria-sort={sortDirection === "asc" ? "ascending" : "descending"}
+            >
+              <button
+                type="button"
+                className="client-list__sort-btn"
+                onClick={() =>
+                  onSortDirectionChange(
+                    sortDirection === "asc" ? "desc" : "asc",
+                  )
+                }
+              >
+                <span>Nome</span>
+                <SortIcon size={14} aria-hidden="true" />
+              </button>
+            </th>
             <th scope="col">CPF / CNPJ</th>
             <th scope="col">E-mail</th>
             <th scope="col">Agência</th>

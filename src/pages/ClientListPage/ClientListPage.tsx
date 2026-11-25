@@ -12,7 +12,7 @@ import "./ClientListPage.css";
 /**
  * Página inicial (`/`) de consulta e gerenciamento da carteira de clientes.
  * Apresenta faixa institucional Banestes com métricas integradas, busca/filtro
- * por agência, listagem responsiva e paginação.
+ * por agência, ordenação por nome, listagem responsiva e paginação.
  */
 export function ClientListPage() {
   const { clientes, contas, agencias, isLoading, error, reload } =
@@ -22,6 +22,7 @@ export function ClientListPage() {
     searchQuery,
     selectedAgencia,
     documentType,
+    sortDirection,
     currentPage,
     totalPages,
     totalItems,
@@ -32,6 +33,7 @@ export function ClientListPage() {
     setSearchQuery,
     setSelectedAgencia,
     setDocumentType,
+    setSortDirection,
     setCurrentPage,
     clearFilters,
   } = useClientFilters(clientes);
@@ -131,9 +133,19 @@ export function ClientListPage() {
               selectedAgencia={selectedAgencia}
               onAgenciaChange={setSelectedAgencia}
               agencias={agencias}
+              sortDirection={sortDirection}
+              onSortDirectionChange={setSortDirection}
               hasActiveFilters={hasActiveFilters}
               onClearFilters={clearFilters}
             />
+
+            {/* Live region sempre montada: anuncia o resultado de cada busca, filtro ou ordenação. */}
+            <p className="sr-only" role="status">
+              {totalItems === 1
+                ? "1 cliente encontrado"
+                : `${totalItems} clientes encontrados`}
+              , ordenados por nome ({sortDirection === "asc" ? "A–Z" : "Z–A"}).
+            </p>
 
             {totalItems === 0 ? (
               <StatusMessage
@@ -152,6 +164,8 @@ export function ClientListPage() {
                 <ClientList
                   clientes={paginatedClientes}
                   agenciaMap={agenciaMap}
+                  sortDirection={sortDirection}
+                  onSortDirectionChange={setSortDirection}
                 />
                 <Pagination
                   currentPage={currentPage}

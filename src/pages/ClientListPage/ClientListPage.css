@@ -11,6 +11,11 @@
   padding-block: var(--space-6);
 }
 
+/* O contorno azul padrão some sobre o gradiente azul; no hero o foco fica branco. */
+.list-hero :focus-visible {
+  outline-color: var(--color-hero-text);
+}
+
 .list-hero__inner {
   display: flex;
   flex-direction: column;

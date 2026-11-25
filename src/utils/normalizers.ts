@@ -1,4 +1,5 @@
 import type { EstadoCivil, TipoConta } from "../types/models";
+import { isValidCnpj, isValidCpf } from "./validators";
 
 /**
  * Normaliza qualquer valor vindo do CSV para texto limpo sem espaços nas pontas.
@@ -46,8 +47,11 @@ export function stripAccents(value: string): string {
  *    quando o valor contém dígitos significativos.
  * 2. Valores compostos apenas por zero (ex.: `"0"` na conta órfã `CNT-108`) são preservados
  *    como estão para não mascarar uma anomalia real em um CPF aparente.
- * 3. Não validamos dígitos verificadores na ingestão do CSV porque 99 de 100 documentos
+ * 3. Não rejeitamos documentos por dígito verificador na ingestão porque 99 de 100 documentos
  *    da base de dados são fictícios (ex.: `11122233344`, `12345678000199`).
+ * 4. Com 11 dígitos ou menos não dá para saber pelo tamanho se era um CNPJ que perdeu zeros
+ *    (ex.: `00012345000190`). Nesse caso o DV desempata: só vira CNPJ se for um CNPJ válido
+ *    e não um CPF válido; documentos fictícios continuam sendo tratados como CPF.
  */
 export function normalizeCpfCnpj(value: unknown): string {
   const digits = onlyDigits(cleanText(value));
@@ -60,11 +64,13 @@ export function normalizeCpfCnpj(value: unknown): string {
     return digits;
   }
 
-  if (digits.length < 11) {
-    return digits.padStart(11, "0");
+  if (digits.length <= 11) {
+    const asCpf = digits.padStart(11, "0");
+    const asCnpj = digits.padStart(14, "0");
+    return !isValidCpf(asCpf) && isValidCnpj(asCnpj) ? asCnpj : asCpf;
   }
 
-  if (digits.length > 11 && digits.length < 14) {
+  if (digits.length < 14) {
     return digits.padStart(14, "0");
   }
 
@@ -88,11 +94,21 @@ function buildLocalDate(year: number, month: number, day: number): Date {
 }
 
 /**
- * Converte strings de data (`YYYY-MM-DD`, `DD/MM/YYYY`, ISO completo ou timestamp)
- * em objeto `Date` sem deslocamento de fuso horário para datas sem hora.
+ * Retorna o início do dia atual no fuso local (00:00), usado como data máxima de nascimento.
+ */
+export function getLocalToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+/**
+ * Converte strings de data (`YYYY-MM-DD`, ISO com hora, `DD/MM/YYYY` ou `YYYYMMDD`)
+ * em objeto `Date` local, sem deslocamento de fuso horário.
  *
  * Na planilha real, `dataNascimento` vem em `YYYY-MM-DD`; usar `new Date("YYYY-MM-DD")`
  * interpreta UTC e desloca 1 dia para trás em fusos negativos (como GMT-3 no Brasil).
+ * Para ISO com hora (`1990-05-14T00:00:00Z`) também usamos só a parte da data: em uma
+ * data de nascimento o que importa é o dia do calendário, não o instante.
  */
 export function parseDate(value: unknown): Date {
   if (value instanceof Date) {
@@ -108,7 +124,7 @@ export function parseDate(value: unknown): Date {
     return new Date(Number.NaN);
   }
 
-  const isoDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  const isoDateMatch = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/.exec(raw);
   if (isoDateMatch) {
     const year = Number(isoDateMatch[1]);
     const month = Number(isoDateMatch[2]);
@@ -124,11 +140,12 @@ export function parseDate(value: unknown): Date {
     return buildLocalDate(year, month, day);
   }
 
-  if (/^\d+$/.test(raw)) {
-    const timestamp = Number(raw);
-    if (Number.isFinite(timestamp)) {
-      return new Date(timestamp);
-    }
+  const compactDateMatch = /^(\d{4})(\d{2})(\d{2})$/.exec(raw);
+  if (compactDateMatch) {
+    const year = Number(compactDateMatch[1]);
+    const month = Number(compactDateMatch[2]);
+    const day = Number(compactDateMatch[3]);
+    return buildLocalDate(year, month, day);
   }
 
   const fallback = new Date(raw);
@@ -138,21 +155,22 @@ export function parseDate(value: unknown): Date {
 /**
  * Converte valores monetários ou numéricos em `number`, suportando tanto o padrão
  * americano da planilha atual (`"85000.00"`, `"1,250.50"`) quanto o padrão brasileiro
- * (`"R$ 1.250,50"`, `"1250,50"`). Retorna `0` em caso de valor vazio ou inválido.
+ * (`"R$ 1.250,50"`, `"1250,50"`, `"85.000"`). Retorna `null` se vazio ou inválido,
+ * para o chamador decidir entre avisar, rejeitar ou aplicar fallback.
  */
-export function parseNumber(value: unknown): number {
+export function parseNumber(value: unknown): number | null {
   if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
+    return Number.isFinite(value) ? value : null;
   }
 
   const raw = cleanText(value);
   if (!raw) {
-    return 0;
+    return null;
   }
 
   const sanitized = raw.replace(/R\$/gi, "").replace(/[^0-9.,+-]/g, "");
-  if (!sanitized) {
-    return 0;
+  if (!/\d/.test(sanitized)) {
+    return null;
   }
 
   const hasComma = sanitized.includes(",");
@@ -170,18 +188,21 @@ export function parseNumber(value: unknown): number {
       // Formato US: 1,250.50 -> 1250.50
       normalized = sanitized.replace(/,/g, "");
     }
-  } else if (hasComma) {
-    const commaCount = (sanitized.match(/,/g) ?? []).length;
-    normalized = commaCount > 1 ? sanitized.replace(/,/g, "") : sanitized.replace(",", ".");
-  } else if (hasDot) {
-    const dotCount = (sanitized.match(/\./g) ?? []).length;
-    if (dotCount > 1) {
-      normalized = sanitized.replace(/\./g, "");
+  } else if (hasComma || hasDot) {
+    const separator = hasComma ? "," : ".";
+    // Um único tipo de separador seguido de grupos de exatamente 3 dígitos
+    // (`85.000`, `1.250.000`, `1,250`) é separador de milhar, não decimal.
+    // Valores monetários com casas decimais usam 2 dígitos (`4250.75`, `1250,50`).
+    const isThousandsGrouping = /^[+-]?[1-9]\d{0,2}(?:[.,]\d{3})+$/.test(sanitized);
+    if (isThousandsGrouping) {
+      normalized = sanitized.split(separator).join("");
+    } else if (hasComma) {
+      normalized = sanitized.replace(",", ".");
     }
   }
 
   const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**

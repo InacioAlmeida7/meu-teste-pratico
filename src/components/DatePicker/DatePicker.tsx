@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState, type Ref } from "react";
 import { Calendar } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { ptBR } from "react-day-picker/locale";
 import "react-day-picker/style.css";
+import { useAnchoredPopover } from "../../hooks/useAnchoredPopover";
 import { formatDateBR } from "../../utils/formatters";
-import { onlyDigits, parseDate } from "../../utils/normalizers";
+import { getLocalToday, onlyDigits, parseDate } from "../../utils/normalizers";
 import "./DatePicker.css";
 
 interface DatePickerProps {
@@ -18,12 +19,28 @@ interface DatePickerProps {
   required?: boolean;
   minYear?: number;
   maxDate?: Date;
+  /** Repassado ao input: permite ao React Hook Form focar o campo inválido. */
+  ref?: Ref<HTMLInputElement>;
 }
 
+const pad2 = (part: string) => part.padStart(2, "0");
+
 /**
- * Aplica máscara `DD/MM/AAAA` enquanto o usuário digita apenas números.
+ * Converte o texto digitado ou colado para `DD/MM/AAAA`.
+ * Datas completas coladas em outros formatos (`AAAA-MM-DD`, `D/M/AAAA`, `DD.MM.AAAA`)
+ * são reordenadas; caso contrário aplica a máscara sobre os dígitos.
  */
-function applyDateMask(rawValue: string): string {
+function toMaskedDate(rawValue: string): string {
+  const trimmed = rawValue.trim();
+  const yearFirst = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(trimmed);
+  if (yearFirst) {
+    return `${pad2(yearFirst[3])}/${pad2(yearFirst[2])}/${yearFirst[1]}`;
+  }
+  const dayFirst = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(trimmed);
+  if (dayFirst) {
+    return `${pad2(dayFirst[1])}/${pad2(dayFirst[2])}/${dayFirst[3]}`;
+  }
+
   const digits = onlyDigits(rawValue).slice(0, 8);
   if (digits.length <= 2) {
     return digits;
@@ -34,15 +51,11 @@ function applyDateMask(rawValue: string): string {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
-function getLocalToday(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
 /**
  * Campo de data com digitação mascarada (`DD/MM/AAAA`) e calendário popover em português
  * (`react-day-picker` + `ptBR`) com seletores de Mês e Ano.
- * Usa a Popover API (`popover="manual"`) para renderizar na top-layer acima de `<dialog>`.
+ * O calendário abre em popover na top-layer (`useAnchoredPopover`) e fecha com Esc,
+ * clique fora ou quando o foco sai dele (Tab).
  */
 export function DatePicker({
   id,
@@ -55,162 +68,47 @@ export function DatePicker({
   required = false,
   minYear = 1900,
   maxDate,
+  ref,
 }: DatePickerProps) {
   const popoverId = useId();
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const { anchorRef, triggerRef, popoverRef, isOpen, open, close } =
+    useAnchoredPopover({ onDismiss: onBlur });
 
-  const [isOpen, setIsOpen] = useState(false);
-
-  const resolvedMaxDate = useMemo(
-    () => maxDate ?? getLocalToday(),
-    [maxDate],
-  );
+  // "Hoje" é recalculado a cada abertura para não ficar obsoleto após a meia-noite.
+  const [today, setToday] = useState(getLocalToday);
+  const resolvedMaxDate = maxDate ?? today;
   const minDate = useMemo(() => new Date(minYear, 0, 1), [minYear]);
 
-  const parsedSelectedDate = useMemo(() => {
-    const trimmed = value.trim();
-    if (!/^(?:\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})$/.test(trimmed)) {
+  function getSelectedDate(): Date | undefined {
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
       return undefined;
     }
-    const parsed = parseDate(trimmed);
+    const parsed = parseDate(value);
     if (
       Number.isNaN(parsed.getTime()) ||
-      parsed.getTime() < minDate.getTime() ||
-      parsed.getTime() > resolvedMaxDate.getTime()
+      parsed < minDate ||
+      parsed > resolvedMaxDate
     ) {
       return undefined;
     }
     return parsed;
-  }, [value, minDate, resolvedMaxDate]);
+  }
+  const selectedDate = getSelectedDate();
 
   const [displayMonth, setDisplayMonth] = useState<Date>(
-    () => parsedSelectedDate ?? new Date(1990, 0, 1),
+    () => selectedDate ?? new Date(1990, 0, 1),
   );
-
-  const updatePopoverPosition = useCallback(() => {
-    const wrapper = wrapperRef.current;
-    const popover = popoverRef.current;
-    if (!wrapper || !popover) {
-      return;
-    }
-
-    const anchorRect = wrapper.getBoundingClientRect();
-    const popRect = popover.getBoundingClientRect();
-    const popWidth = popRect.width || 312;
-    const popHeight = popRect.height || 348;
-    const margin = 12;
-
-    const left = Math.min(
-      Math.max(margin, anchorRect.left),
-      window.innerWidth - popWidth - margin,
-    );
-
-    const spaceBelow = window.innerHeight - anchorRect.bottom - margin;
-    const spaceAbove = anchorRect.top - margin;
-    const top =
-      spaceBelow >= popHeight || spaceBelow >= spaceAbove
-        ? Math.min(anchorRect.bottom + 6, window.innerHeight - popHeight - margin)
-        : Math.max(margin, anchorRect.top - popHeight - 6);
-
-    popover.style.left = `${left}px`;
-    popover.style.top = `${top}px`;
-  }, []);
-
-  const closePopover = useCallback(
-    (restoreFocusToTrigger: boolean) => {
-      const popover = popoverRef.current;
-      if (popover?.matches(":popover-open")) {
-        popover.hidePopover();
-      }
-      setIsOpen(false);
-      if (restoreFocusToTrigger) {
-        triggerRef.current?.focus();
-      }
-    },
-    [],
-  );
-
-  function openPopover() {
-    const popover = popoverRef.current;
-    if (!popover) {
-      return;
-    }
-
-    setDisplayMonth(parsedSelectedDate ?? new Date(1990, 0, 1));
-    if (!popover.matches(":popover-open")) {
-      popover.showPopover();
-    }
-    setIsOpen(true);
-    window.requestAnimationFrame(() => {
-      updatePopoverPosition();
-    });
-  }
 
   function handleTogglePopover() {
     if (isOpen) {
-      closePopover(false);
+      close(false);
       return;
     }
-    openPopover();
+    setToday(getLocalToday());
+    setDisplayMonth(selectedDate ?? new Date(1990, 0, 1));
+    open();
   }
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    updatePopoverPosition();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        closePopover(true);
-      }
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-      if (
-        wrapperRef.current?.contains(target) ||
-        popoverRef.current?.contains(target)
-      ) {
-        return;
-      }
-      closePopover(false);
-    }
-
-    function handleViewportChange() {
-      updatePopoverPosition();
-    }
-
-    document.addEventListener("keydown", handleKeyDown, true);
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown, true);
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
-    };
-  }, [isOpen, closePopover, updatePopoverPosition]);
-
-  useEffect(() => {
-    const popover = popoverRef.current;
-    return () => {
-      if (popover?.matches(":popover-open")) {
-        popover.hidePopover();
-      }
-    };
-  }, []);
 
   function handleDaySelect(day: Date | undefined) {
     if (!day) {
@@ -218,15 +116,22 @@ export function DatePicker({
     }
     onChange(formatDateBR(day));
     onBlur();
-    closePopover(false);
+    close(false);
     inputRef.current?.focus();
   }
 
   return (
-    <div ref={wrapperRef} className="date-picker">
+    <div ref={anchorRef} className="date-picker">
       <div className="date-picker__control">
         <input
-          ref={inputRef}
+          ref={(node) => {
+            inputRef.current = node;
+            if (typeof ref === "function") {
+              ref(node);
+            } else if (ref) {
+              ref.current = node;
+            }
+          }}
           id={id}
           name={name}
           type="text"
@@ -239,7 +144,7 @@ export function DatePicker({
           aria-invalid={ariaInvalid ? "true" : undefined}
           aria-describedby={ariaDescribedBy}
           value={value}
-          onChange={(event) => onChange(applyDateMask(event.target.value))}
+          onChange={(event) => onChange(toMaskedDate(event.target.value))}
           onBlur={onBlur}
         />
 
@@ -276,7 +181,7 @@ export function DatePicker({
             endMonth={resolvedMaxDate}
             month={displayMonth}
             onMonthChange={setDisplayMonth}
-            selected={parsedSelectedDate}
+            selected={selectedDate}
             onSelect={handleDaySelect}
             disabled={{ before: minDate, after: resolvedMaxDate }}
             showOutsideDays

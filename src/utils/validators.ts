@@ -1,4 +1,8 @@
-import { onlyDigits } from "./normalizers";
+// Implementação local (e não a de `normalizers.ts`) para evitar import circular:
+// `normalizeCpfCnpj` usa estes validadores para desambiguar CPF/CNPJ.
+function onlyDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
 
 /**
  * Valida CPF verificando tamanho (11 dígitos), sequência repetida e os dois dígitos verificadores.
