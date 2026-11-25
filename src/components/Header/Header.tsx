@@ -32,7 +32,7 @@ export function Header({ onNewClient }: HeaderProps) {
     <header
       className={isScrolled ? "site-header site-header--scrolled" : "site-header"}
     >
-      <a href="#main-content" className="skip-link sr-only">
+      <a href="#main-content" className="skip-link">
         Pular para o conteúdo principal
       </a>
 

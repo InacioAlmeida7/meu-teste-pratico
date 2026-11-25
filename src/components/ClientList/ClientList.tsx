@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Building2, ChevronRight, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Agencia, Cliente } from "../../types/models";
@@ -16,10 +17,33 @@ interface ClientListProps {
  * no mobile (< 768px) transforma as linhas em cards empilhados com rótulos CSS.
  */
 export function ClientList({ clientes, agenciaMap }: ClientListProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
+
+  // A região só entra na ordem de Tab quando há rolagem horizontal a fazer pelo teclado
+  // (tabela larga); nos cards do mobile seria uma parada de foco inútil.
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      setIsScrollable(wrapper.scrollWidth > wrapper.clientWidth);
+    });
+    observer.observe(wrapper);
+    if (wrapper.firstElementChild) {
+      observer.observe(wrapper.firstElementChild);
+    }
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div
+      ref={wrapperRef}
       className="client-list-wrapper"
-      tabIndex={0}
+      tabIndex={isScrollable ? 0 : undefined}
       role="region"
       aria-labelledby="client-table-caption"
     >

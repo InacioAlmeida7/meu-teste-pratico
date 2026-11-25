@@ -13,7 +13,12 @@ export interface Cliente {
   endereco: string;
   rendaAnual: number;
   patrimonio: number;
-  estadoCivil: EstadoCivil;
+  /**
+   * Ausente apenas quando a planilha traz valor vazio ou fora do domínio:
+   * exibido como "Não informado" em vez de inventar um estado civil.
+   * O cadastro pelo formulário sempre exige um valor válido.
+   */
+  estadoCivil?: EstadoCivil;
   codigoAgencia: number;
 }
 

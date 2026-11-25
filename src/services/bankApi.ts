@@ -158,7 +158,7 @@ function mapRowToCliente(row: CsvRow, index: number): Cliente | null {
   const estadoCivil = normalizeEstadoCivil(row.estadoCivil);
   if (!estadoCivil) {
     console.warn(
-      `[bankApi] Cliente ${id} (${nome}) possui estadoCivil não reconhecido ("${cleanText(row.estadoCivil)}"); aplicado fallback "Solteiro".`,
+      `[bankApi] Cliente ${id} (${nome}) possui estadoCivil não reconhecido ("${cleanText(row.estadoCivil)}"); exibido como "Não informado".`,
     );
   }
 
@@ -180,7 +180,7 @@ function mapRowToCliente(row: CsvRow, index: number): Cliente | null {
     endereco: cleanText(row.endereco),
     rendaAnual: readAmount(row.rendaAnual, `Cliente ${id} (rendaAnual)`),
     patrimonio: readAmount(row.patrimonio, `Cliente ${id} (patrimonio)`),
-    estadoCivil: estadoCivil ?? "Solteiro",
+    estadoCivil: estadoCivil ?? undefined,
     codigoAgencia: codigoAgencia ?? 0,
   };
 }

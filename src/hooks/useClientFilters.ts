@@ -60,7 +60,8 @@ function matchesSearchQuery(
  * Gerencia busca textual/documento, filtro de tipo de documento (CPF/CNPJ),
  * filtro de agência e paginação de até 10 itens por página.
  * Qualquer mudança nos critérios de busca ou filtro reinicia a página atual para 1,
- * evitando páginas vazias após refinar a consulta.
+ * evitando páginas vazias após refinar a consulta. Quando a base cresce (novo cadastro),
+ * os filtros também são limpos para o cliente recém-criado aparecer no topo da página 1.
  */
 export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
   const [searchQuery, setSearchQueryState] = useState<string>("");
@@ -68,6 +69,18 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
   const [documentType, setDocumentTypeState] =
     useState<DocumentTypeFilter>("all");
   const [currentPage, setCurrentPageState] = useState<number>(1);
+  const [knownCount, setKnownCount] = useState<number>(clientes.length);
+
+  // Ajuste de estado durante o render (padrão recomendado pelo React em vez de useEffect).
+  if (clientes.length !== knownCount) {
+    setKnownCount(clientes.length);
+    if (clientes.length > knownCount) {
+      setSearchQueryState("");
+      setSelectedAgenciaState("");
+      setDocumentTypeState("all");
+      setCurrentPageState(1);
+    }
+  }
 
   const setSearchQuery = useCallback((value: string) => {
     setSearchQueryState(value);

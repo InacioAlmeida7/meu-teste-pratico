@@ -65,8 +65,8 @@ svg {
   outline-offset: 2px;
 }
 
-/* Esconde visualmente mantendo na árvore de acessibilidade, exceto ao receber foco */
-.sr-only:where(:not(:focus-within, :active)) {
+/* Esconde visualmente mantendo o conteúdo na árvore de acessibilidade */
+.sr-only {
   position: absolute !important;
   clip-path: inset(50%) !important;
   overflow: hidden !important;
@@ -78,11 +78,13 @@ svg {
   white-space: nowrap !important;
 }
 
-.skip-link:focus-visible {
+/* Link "Pular para o conteúdo": fora da tela até receber foco pelo teclado */
+.skip-link {
   position: fixed;
   inset-block-start: var(--space-3);
   inset-inline-start: var(--space-3);
   z-index: 999;
+  transform: translateY(calc(-100% - var(--space-6)));
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background-color: var(--color-brand-primary);
@@ -91,6 +93,15 @@ svg {
   font-weight: var(--font-semibold);
   text-decoration: none;
   box-shadow: var(--shadow-header);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.skip-link:focus-visible {
+  outline-color: var(--color-text-on-brand);
+  outline-offset: -5px;
 }
 
 .tabular-nums {

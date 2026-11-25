@@ -663,7 +663,7 @@ export function ClientDetailPage() {
           </DetailField>
 
           <DetailField icon={Heart} label="Estado civil">
-            {cliente.estadoCivil}
+            {cliente.estadoCivil ?? "Não informado"}
           </DetailField>
 
           <DetailField

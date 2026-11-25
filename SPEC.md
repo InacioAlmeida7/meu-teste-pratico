@@ -79,7 +79,7 @@ O parsing das strings CSV deve ser feito com **PapaParse** (`{ header: true, ski
    * Ao pesquisar clientes por CPF/CNPJ (permitindo busca com ou sem máscara).
 3. **Datas (`parseDate`)**: Suportar múltiplos formatos reais (`DD/MM/YYYY`, `YYYY-MM-DD`, timestamps ou strings ISO), construindo o `Date` sem deslocamento de fuso horário (ex.: usar construtor local `new Date(year, month - 1, day)` para datas sem hora). Se a data for inválida, tratar de forma segura sem quebrar a renderização.
 4. **Números e Moeda (`parseNumber`)**: Suportar strings com formato brasileiro (`"1.250,50"`), formato americano (`"1250.50"`), prefixos como `"R$"` ou espaços. Se vier vazio ou inválido, retornar `0` (ou descartar/alertar conforme a criticidade do campo).
-5. **Estado Civil (`normalizeEstadoCivil`)**: Normalizar caixa (maiúsculas/minúsculas), espaços e acentos para mapear estritamente para `"Solteiro" | "Casado" | "Viúvo" | "Divorciado"` (inclusive tratando variações femininas como `"Solteira"` → `"Solteiro"`, caso apareçam na planilha).
+5. **Estado Civil (`normalizeEstadoCivil`)**: Normalizar caixa (maiúsculas/minúsculas), espaços e acentos para mapear estritamente para `"Solteiro" | "Casado" | "Viúvo" | "Divorciado"` (inclusive tratando variações femininas como `"Solteira"` → `"Solteiro"`, caso apareçam na planilha). Valores vazios ou não reconhecidos não recebem um estado civil inventado: o campo fica ausente (`estadoCivil?` em `models.ts`) e a tela exibe `"Não informado"`.
 6. **Tipo de Conta (`normalizeTipoConta`)**: Normalizar caixa/acentos (ex.: `"Poupança"`, `"POUPANCA"`, `"Corrente"`) para `"corrente" | "poupanca"`.
 7. **Tratamento de anomalias:**
    * Se uma linha do CSV vier sem campos essenciais (ex.: `nome` ou `cpfCnpj` vazio), ignorar a linha com segurança e registrar um `console.warn` descritivo (sem derrubar a aplicação).
@@ -184,7 +184,7 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
 
 ### Rota `/clientes/:id` — Detalhes do Cliente (`ClientDetailPage`)
 1. **Navegação:** Link/botão **"← Voltar para a lista"** no topo. Se o `id` da URL não existir (ex.: cliente recém-cadastrado após F5), exibir estado "Cliente não encontrado" com botão para voltar à listagem.
-2. **Seção 1 — Dados Cadastrais Completos:** Exibir todas as propriedades do cliente (`nome`, `nomeSocial` se houver, `cpfCnpj`, `rg` ou `"Não informado"`, `dataNascimento` formatada, `estadoCivil`, `email`, `endereco`, `rendaAnual` e `patrimonio` formatados em BRL).
+2. **Seção 1 — Dados Cadastrais Completos:** Exibir todas as propriedades do cliente (`nome`, `nomeSocial` se houver, `cpfCnpj`, `rg` ou `"Não informado"`, `dataNascimento` formatada, `estadoCivil` ou `"Não informado"`, `email`, `endereco`, `rendaAnual` e `patrimonio` formatados em BRL).
 3. **Seção 2 — Agência Vinculada (`AgencyCard`):** Cruzamento via `cliente.codigoAgencia === agencia.codigo`. Exibir `nome`, `codigo`, `endereco` e `id`.
 4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Para cada conta, exibir:
    * Badge diferenciando **Conta Corrente** e **Conta Poupança**;

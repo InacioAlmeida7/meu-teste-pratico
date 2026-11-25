@@ -7,7 +7,6 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { ClientFormModal } from "./components/ClientFormModal/ClientFormModal";
 import { Footer } from "./components/Footer/Footer";
 import { Header } from "./components/Header/Header";
 import { StatusMessage } from "./components/StatusMessage/StatusMessage";
@@ -17,10 +16,16 @@ import { ClientListPage } from "./pages/ClientListPage/ClientListPage";
 import type { Cliente } from "./types/models";
 import { onlyDigits } from "./utils/normalizers";
 
-// A tela de detalhe só é baixada ao abrir um cliente, mantendo o bundle inicial menor.
+// Detalhe e formulário (React Hook Form + Zod + calendário) só são baixados quando usados,
+// mantendo o bundle inicial menor.
 const ClientDetailPage = lazy(() =>
   import("./pages/ClientDetailPage/ClientDetailPage").then((module) => ({
     default: module.ClientDetailPage,
+  })),
+);
+const ClientFormModal = lazy(() =>
+  import("./components/ClientFormModal/ClientFormModal").then((module) => ({
+    default: module.ClientFormModal,
   })),
 );
 
@@ -29,10 +34,9 @@ function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Após a primeira abertura o modal permanece montado (o `<dialog>` só é exibido via `showModal`).
+  const [hasOpenedModal, setHasOpenedModal] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
-  // Trocar a `key` da listagem remonta a página e zera busca, filtros e paginação
-  // (padrão do React para resetar estado), exibindo o novo cliente no topo da página 1.
-  const [listResetTick, setListResetTick] = useState(0);
 
   useEffect(() => {
     if (!successToast) {
@@ -56,7 +60,6 @@ function AppLayout() {
 
   function handleCreateClient(novoCliente: Cliente) {
     addCliente(novoCliente);
-    setListResetTick((prev) => prev + 1);
     setSuccessToast(
       "Cliente cadastrado com sucesso (armazenado em memória até o recarregamento da página).",
     );
@@ -68,7 +71,12 @@ function AppLayout() {
 
   return (
     <div className="app-shell">
-      <Header onNewClient={() => setIsModalOpen(true)} />
+      <Header
+        onNewClient={() => {
+          setHasOpenedModal(true);
+          setIsModalOpen(true);
+        }}
+      />
 
       <main id="main-content" className="app-main" tabIndex={-1}>
         {/* A região `status` fica sempre montada: leitores de tela só anunciam
@@ -99,7 +107,7 @@ function AppLayout() {
         </div>
 
         <Routes>
-          <Route path="/" element={<ClientListPage key={listResetTick} />} />
+          <Route path="/" element={<ClientListPage />} />
           <Route
             path="/clientes/:id"
             element={
@@ -120,13 +128,17 @@ function AppLayout() {
 
       <Footer />
 
-      <ClientFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        agencias={agencias}
-        existingDocuments={existingDocuments}
-        onCreateClient={handleCreateClient}
-      />
+      {hasOpenedModal ? (
+        <Suspense fallback={null}>
+          <ClientFormModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            agencias={agencias}
+            existingDocuments={existingDocuments}
+            onCreateClient={handleCreateClient}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }
