@@ -381,11 +381,6 @@
   }
 }
 
-.client-detail__section {
-  display: grid;
-  gap: var(--space-3);
-}
-
 .client-detail__section-header {
   display: flex;
   flex-wrap: wrap;
@@ -470,14 +465,6 @@
   .client-detail__credit-overview-fill {
     animation: account-bar-fill 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
-}
-
-.client-detail__card {
-  padding: var(--space-5);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  background-color: var(--color-bg-surface);
-  box-shadow: var(--shadow-card);
 }
 
 .client-detail__grid {
