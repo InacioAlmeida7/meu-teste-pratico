@@ -85,12 +85,69 @@
   color: var(--color-text-primary);
 }
 
+.search-toolbar__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.search-toolbar__checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.5rem;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-table-head);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.search-toolbar__checkbox-label:hover {
+  border-color: var(--color-brand-secondary);
+  background-color: var(--color-bg-subtle);
+}
+
+.search-toolbar__checkbox-label:has(:checked) {
+  border-color: var(--color-error-border);
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.search-toolbar__checkbox {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  margin: 0;
+  accent-color: var(--color-brand-primary);
+  cursor: pointer;
+}
+
+.search-toolbar__checkbox-icon {
+  flex-shrink: 0;
+  color: var(--color-error-text);
+}
+
 .search-toolbar__actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+@media (pointer: coarse) {
+  .search-toolbar__checkbox-label {
+    min-block-size: 2.75rem;
+  }
 }
 
 @media (min-width: 768px) {
@@ -114,14 +171,7 @@
 }
 
 @media (min-width: 1024px) {
-  .search-toolbar {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-  }
-
   .search-toolbar__filters {
-    flex: 1;
     grid-template-columns:
       minmax(15rem, 1.45fr)
       minmax(12.5rem, 0.9fr)
@@ -130,9 +180,5 @@
 
   .search-toolbar__field--query {
     grid-column: auto;
-  }
-
-  .search-toolbar__actions {
-    flex-shrink: 0;
   }
 }

@@ -113,7 +113,8 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
     ├── utils/
     │   ├── normalizers.ts            # Conversão segura CSV -> tipos da aplicação
     │   ├── formatters.ts             # Formatação BRL, datas, CPF/CNPJ
-    │   └── validators.ts             # Validação de CPF e CNPJ (dígitos verificadores)
+    │   ├── validators.ts             # Validação de CPF e CNPJ (dígitos verificadores)
+    │   └── credit.ts                 # Uso consolidado de limite e nível de risco de crédito
     ├── services/
     │   └── bankApi.ts                # Fetch API + Response.text() + PapaParse + mapeamento
     ├── schemas/
@@ -149,9 +150,9 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Botão "Limpar filtros" exibido quando há busca ou filtro ativo.
    * **Ordenação por nome:** o cabeçalho **Nome** é um botão que alterna A–Z / Z–A (`aria-sort`). Padrão: A–Z, ordem alfabética pt-BR sem diferenciar acentos. No mobile, onde o cabeçalho fica oculto, um campo "Ordenar por" oferece as mesmas duas opções.
    * **Regra obrigatória:** Qualquer alteração na busca, filtro ou ordenação deve resetar automaticamente a página atual para **1**.
-   * **Sincronização com a URL:** Busca (`q`), agência (`agencia`), tipo de documento (`doc`: `cpf` | `cnpj`), ordenação (`ordem`: `desc`) e página (`pagina`) ficam sincronizados via `useSearchParams`. Valores padrão não aparecem na URL, parâmetros inválidos caem no padrão sem erro, digitar na busca usa `replace: true` e mudanças de filtro/ordenação/página criam entrada no histórico.
+   * **Sincronização com a URL:** Busca (`q`), agência (`agencia`), tipo de documento (`doc`: `cpf` | `cnpj`), uso de crédito alto (`credito`: `alto`), ordenação (`ordem`: `desc`) e página (`pagina`) ficam sincronizados via `useSearchParams`. Valores padrão não aparecem na URL, parâmetros inválidos caem no padrão sem erro, digitar na busca usa `replace: true` e mudanças de filtro/ordenação/página criam entrada no histórico.
 3. **Listagem Responsiva (`ClientList`):**
-   * Exibir apenas os dados principais: **Nome** (com indicador discreto de Nome Social se houver), **CPF/CNPJ formatado**, **E-mail**, **Agência** (código/nome) e botão/ação **"Ver detalhes"** (preservando os query params da listagem para o retorno).
+   * Exibir apenas os dados principais: **Nome** (com indicador discreto de Nome Social se houver e tag compacta **"Crédito alto"** para clientes com uso $\ge 80\%$), **CPF/CNPJ formatado**, **E-mail**, **Agência** (código/nome) e botão/ação **"Ver detalhes"** (preservando os query params da listagem para o retorno).
    * **Desktop (`>= 768px`):** Tabela HTML semântica (`<table>`, `<thead>`, `<th scope="col">`, `<caption>` com `.sr-only`), linhas clicáveis ou com ação clara.
    * **Mobile (`< 768px`):** Layout em cards empilhados sem rolagem horizontal forçada.
 4. **Paginação (`Pagination`):**
@@ -189,7 +190,7 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
 1. **Navegação:** Link/botão **"← Voltar para a lista"** no topo, restaurando os filtros e a página preservados na navegação de entrada. Se o `id` da URL não existir (ex.: cliente recém-cadastrado após F5), exibir estado "Cliente não encontrado" com botão para voltar à listagem.
 2. **Seção 1 — Dados Cadastrais Completos:** Exibir todas as propriedades do cliente (`nome`, `nomeSocial` se houver, `cpfCnpj`, `rg` ou `"Não informado"`, `dataNascimento` formatada, `estadoCivil` ou `"Não informado"`, `email`, `endereco`, `rendaAnual` e `patrimonio` formatados em BRL).
 3. **Seção 2 — Agência Vinculada (`AgencyCard`):** Cruzamento via `cliente.codigoAgencia === agencia.codigo`. Exibir `nome`, `codigo`, `endereco` e `id`.
-4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Arranjo: 1 a 3 contas em cards lado a lado, 4 contas em grade 2×2 e 5 ou mais em lista compacta. Para cada conta, exibir:
+4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Exibir medidor consolidado acessível (`role="meter"`, `aria-valuenow`, texto `"X% do limite utilizado"` e badge com ícone + nível `"sem-credito" | "baixo" | "moderado" | "alto"`, via `getCreditUsage`). Arranjo: 1 a 3 contas em cards lado a lado, 4 contas em grade 2×2 e 5 ou mais em lista compacta. Para cada conta, exibir:
    * Badge diferenciando **Conta Corrente** e **Conta Poupança**;
    * **Saldo** (destaque visual sutil para saldo positivo vs. negativo);
    * **Limite de Crédito** e **Crédito Disponível** (com barra visual simples em CSS mostrando proporção utilizada/disponível quando `limiteCredito > 0`).

@@ -10,8 +10,8 @@ Aplicação React + TypeScript para consultar, filtrar, detalhar e cadastrar (em
 
 | Tela | O que faz |
 | --- | --- |
-| **Listagem** (`/`) | Busca por nome, nome social ou CPF/CNPJ (ignora acentos e pontuação) · filtros por tipo de documento e agência · ordenação por nome **A–Z** (padrão) ou **Z–A**, clicando em "Nome" (no celular, pelo campo "Ordenar por") · 10 clientes por página · filtros/ordenação/página sincronizados na URL (`q`, `agencia`, `doc`, `ordem`, `pagina`) e preservados ao voltar do detalhe · volta à página 1 a cada busca, filtro, ordenação ou cadastro |
-| **Detalhe** (`/clientes/:id`) | Abas **Resumo**, **Contas Bancárias** e **Cadastro e Agência** · totais de saldo, crédito disponível e patrimônio · contas em cards (1–3 lado a lado, 4 em grade 2×2) ou em lista quando há 5 ou mais · painel lateral com os dados de cada conta |
+| **Listagem** (`/`) | Busca por nome, nome social ou CPF/CNPJ (ignora acentos e pontuação) · filtros por tipo de documento, agência e uso de crédito alto (`credito=alto`) · destaque **"Crédito alto"** para uso $\ge 80\%$ · ordenação por nome **A–Z** (padrão) ou **Z–A**, clicando em "Nome" (no celular, pelo campo "Ordenar por") · 10 clientes por página · filtros/ordenação/página sincronizados na URL (`q`, `agencia`, `doc`, `credito`, `ordem`, `pagina`) e preservados ao voltar do detalhe · volta à página 1 a cada busca, filtro, ordenação ou cadastro |
+| **Detalhe** (`/clientes/:id`) | Abas **Resumo**, **Contas Bancárias** e **Cadastro e Agência** · totais de saldo, crédito disponível e patrimônio · medidor acessível de uso consolidado de limite de crédito e nível de risco · contas em cards (1–3 lado a lado, 4 em grade 2×2) ou em lista quando há 5 ou mais · painel lateral com os dados de cada conta |
 | **Novo cliente** | Modal com validação (React Hook Form + Zod) · CPF/CNPJ com dígito verificador e sem duplicidade · aviso no canto inferior direito com link **"Ver cliente"**, que some sozinho em 7 s (pausa com mouse ou foco) |
 | **Tema e Estados** | Tema claro/escuro no cabeçalho (`localStorage` + preferência do sistema operacional, sem flash inicial e impressão clara) · carregamento, erro com "Tentar novamente" (sem perder os cadastros feitos) e lista vazia |
 
@@ -81,7 +81,7 @@ src/
 ├── App.tsx        # Layout, rotas e modal de cadastro (carregados sob demanda)
 ├── types/         # Interfaces Cliente, Conta e Agencia
 ├── services/      # Leitura e conversão das planilhas (bankApi.ts)
-├── utils/         # Normalização, formatação e validação de CPF/CNPJ
+├── utils/         # Normalização, formatação, validação de CPF/CNPJ e cálculo de uso de crédito
 ├── schemas/       # Schema Zod do cadastro
 ├── context/       # Dados em memória (BankDataContext)
 ├── hooks/         # Filtros/paginação na URL, tema, popovers e fechamento de <dialog>

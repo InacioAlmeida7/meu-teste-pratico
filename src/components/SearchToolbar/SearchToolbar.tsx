@@ -1,5 +1,12 @@
 import { useMemo } from "react";
-import { ArrowUpDown, Building2, IdCard, Search, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpDown,
+  Building2,
+  IdCard,
+  Search,
+  X,
+} from "lucide-react";
 import type {
   DocumentTypeFilter,
   SortDirection,
@@ -19,6 +26,8 @@ interface SearchToolbarProps {
   selectedAgencia: string;
   onAgenciaChange: (value: string) => void;
   agencias: Agencia[];
+  onlyHighCredit: boolean;
+  onOnlyHighCreditChange: (value: boolean) => void;
   sortDirection: SortDirection;
   onSortDirectionChange: (value: SortDirection) => void;
   hasActiveFilters: boolean;
@@ -57,6 +66,8 @@ export function SearchToolbar({
   selectedAgencia,
   onAgenciaChange,
   agencias,
+  onlyHighCredit,
+  onOnlyHighCreditChange,
   sortDirection,
   onSortDirectionChange,
   hasActiveFilters,
@@ -158,17 +169,38 @@ export function SearchToolbar({
         </div>
       </div>
 
-      {hasActiveFilters ? (
-        <div className="search-toolbar__actions">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onClearFilters}
-          >
-            Limpar filtros
-          </button>
-        </div>
-      ) : null}
+      <div className="search-toolbar__footer">
+        <label
+          className="search-toolbar__checkbox-label"
+          htmlFor="high-credit-filter"
+        >
+          <input
+            id="high-credit-filter"
+            type="checkbox"
+            className="search-toolbar__checkbox"
+            checked={onlyHighCredit}
+            onChange={(event) => onOnlyHighCreditChange(event.target.checked)}
+          />
+          <AlertTriangle
+            size={15}
+            className="search-toolbar__checkbox-icon"
+            aria-hidden="true"
+          />
+          <span>Somente uso de crédito alto</span>
+        </label>
+
+        {hasActiveFilters ? (
+          <div className="search-toolbar__actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onClearFilters}
+            >
+              Limpar filtros
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

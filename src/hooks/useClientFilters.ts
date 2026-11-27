@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Cliente } from "../types/models";
+import type { CreditUsageLevel } from "../utils/credit";
 import { onlyDigits, stripAccents } from "../utils/normalizers";
 
 export const PAGE_SIZE = 10;
@@ -13,6 +14,7 @@ export type SortDirection = "asc" | "desc";
 const PARAM_QUERY = "q";
 const PARAM_AGENCIA = "agencia";
 const PARAM_DOC = "doc";
+const PARAM_HIGH_CREDIT = "credito";
 const PARAM_SORT = "ordem";
 const PARAM_PAGE = "pagina";
 
@@ -50,10 +52,15 @@ function parsePageParam(raw: string | null): number {
   return parsed >= 1 ? parsed : 1;
 }
 
+function parseHighCreditParam(raw: string | null): boolean {
+  return raw === "alto";
+}
+
 export interface ClientFiltersResult {
   searchQuery: string;
   selectedAgencia: string;
   documentType: DocumentTypeFilter;
+  onlyHighCredit: boolean;
   sortDirection: SortDirection;
   currentPage: number;
   totalPages: number;
@@ -65,6 +72,7 @@ export interface ClientFiltersResult {
   setSearchQuery: (value: string) => void;
   setSelectedAgencia: (value: string) => void;
   setDocumentType: (value: DocumentTypeFilter) => void;
+  setOnlyHighCredit: (value: boolean) => void;
   setSortDirection: (value: SortDirection) => void;
   setCurrentPage: (page: number) => void;
   clearFilters: () => void;
@@ -111,12 +119,18 @@ function matchesSearchQuery(
  * (novo cadastro), os filtros são limpos mantendo a ordenação para o cliente recém-criado
  * não ficar oculto.
  */
-export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
+export function useClientFilters(
+  clientes: Cliente[],
+  creditLevelMap?: Map<string, CreditUsageLevel>,
+): ClientFiltersResult {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const searchQuery = searchParams.get(PARAM_QUERY) ?? "";
   const selectedAgencia = parseAgenciaParam(searchParams.get(PARAM_AGENCIA));
   const documentType = parseDocumentTypeParam(searchParams.get(PARAM_DOC));
+  const onlyHighCredit = parseHighCreditParam(
+    searchParams.get(PARAM_HIGH_CREDIT),
+  );
   const sortDirection = parseSortDirectionParam(searchParams.get(PARAM_SORT));
   const currentPage = parsePageParam(searchParams.get(PARAM_PAGE));
 
@@ -143,6 +157,7 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
         next.delete(PARAM_QUERY);
         next.delete(PARAM_AGENCIA);
         next.delete(PARAM_DOC);
+        next.delete(PARAM_HIGH_CREDIT);
         next.delete(PARAM_PAGE);
       }, true);
     }
@@ -191,6 +206,20 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     [updateParams],
   );
 
+  const setOnlyHighCredit = useCallback(
+    (value: boolean) => {
+      updateParams((next) => {
+        if (value) {
+          next.set(PARAM_HIGH_CREDIT, "alto");
+        } else {
+          next.delete(PARAM_HIGH_CREDIT);
+        }
+        next.delete(PARAM_PAGE);
+      }, false);
+    },
+    [updateParams],
+  );
+
   const setSortDirection = useCallback(
     (value: SortDirection) => {
       updateParams((next) => {
@@ -210,6 +239,7 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
       next.delete(PARAM_QUERY);
       next.delete(PARAM_AGENCIA);
       next.delete(PARAM_DOC);
+      next.delete(PARAM_HIGH_CREDIT);
       next.delete(PARAM_PAGE);
     }, false);
   }, [updateParams]);
@@ -236,9 +266,22 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
           return false;
         }
       }
+      if (
+        onlyHighCredit &&
+        creditLevelMap?.get(onlyDigits(cliente.cpfCnpj)) !== "alto"
+      ) {
+        return false;
+      }
       return matchesSearchQuery(cliente, normalizedTextQuery, digitQuery);
     });
-  }, [clientes, searchQuery, selectedAgencia, documentType]);
+  }, [
+    clientes,
+    searchQuery,
+    selectedAgencia,
+    documentType,
+    onlyHighCredit,
+    creditLevelMap,
+  ]);
 
   const sortedClientes = useMemo(() => {
     const factor = sortDirection === "asc" ? 1 : -1;
@@ -276,12 +319,14 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
     selectedAgencia.trim().length > 0 ||
-    documentType !== "all";
+    documentType !== "all" ||
+    onlyHighCredit;
 
   return {
     searchQuery,
     selectedAgencia,
     documentType,
+    onlyHighCredit,
     sortDirection,
     currentPage: safePage,
     totalPages,
@@ -293,6 +338,7 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
     setSearchQuery,
     setSelectedAgencia,
     setDocumentType,
+    setOnlyHighCredit,
     setSortDirection,
     setCurrentPage,
     clearFilters,

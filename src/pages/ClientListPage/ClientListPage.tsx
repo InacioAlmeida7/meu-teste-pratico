@@ -7,6 +7,7 @@ import { StatusMessage } from "../../components/StatusMessage/StatusMessage";
 import { useBankData } from "../../context/useBankData";
 import { useClientFilters } from "../../hooks/useClientFilters";
 import type { Agencia } from "../../types/models";
+import { buildCreditUsageLevelMap } from "../../utils/credit";
 import "./ClientListPage.css";
 
 /**
@@ -18,10 +19,16 @@ export function ClientListPage() {
   const { clientes, contas, agencias, isLoading, error, reload } =
     useBankData();
 
+  const creditLevelMap = useMemo(
+    () => buildCreditUsageLevelMap(contas),
+    [contas],
+  );
+
   const {
     searchQuery,
     selectedAgencia,
     documentType,
+    onlyHighCredit,
     sortDirection,
     currentPage,
     totalPages,
@@ -33,10 +40,11 @@ export function ClientListPage() {
     setSearchQuery,
     setSelectedAgencia,
     setDocumentType,
+    setOnlyHighCredit,
     setSortDirection,
     setCurrentPage,
     clearFilters,
-  } = useClientFilters(clientes);
+  } = useClientFilters(clientes, creditLevelMap);
 
   useEffect(() => {
     document.title = "Clientes | Gestão de Clientes Bancários";
@@ -133,6 +141,8 @@ export function ClientListPage() {
               selectedAgencia={selectedAgencia}
               onAgenciaChange={setSelectedAgencia}
               agencias={agencias}
+              onlyHighCredit={onlyHighCredit}
+              onOnlyHighCreditChange={setOnlyHighCredit}
               sortDirection={sortDirection}
               onSortDirectionChange={setSortDirection}
               hasActiveFilters={hasActiveFilters}
@@ -164,6 +174,7 @@ export function ClientListPage() {
                 <ClientList
                   clientes={paginatedClientes}
                   agenciaMap={agenciaMap}
+                  creditLevelMap={creditLevelMap}
                   sortDirection={sortDirection}
                   onSortDirectionChange={setSortDirection}
                 />

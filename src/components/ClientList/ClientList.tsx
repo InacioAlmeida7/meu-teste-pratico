@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Building2,
@@ -9,6 +10,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 import type { SortDirection } from "../../hooks/useClientFilters";
 import type { Agencia, Cliente } from "../../types/models";
+import type { CreditUsageLevel } from "../../utils/credit";
 import { formatCpfCnpj } from "../../utils/formatters";
 import { onlyDigits } from "../../utils/normalizers";
 import "./ClientList.css";
@@ -16,6 +18,7 @@ import "./ClientList.css";
 interface ClientListProps {
   clientes: Cliente[];
   agenciaMap: Map<number, Agencia>;
+  creditLevelMap: Map<string, CreditUsageLevel>;
   sortDirection: SortDirection;
   onSortDirectionChange: (direction: SortDirection) => void;
 }
@@ -29,6 +32,7 @@ interface ClientListProps {
 export function ClientList({
   clientes,
   agenciaMap,
+  creditLevelMap,
   sortDirection,
   onSortDirectionChange,
 }: ClientListProps) {
@@ -101,12 +105,21 @@ export function ClientList({
             const agencia = agenciaMap.get(cliente.codigoAgencia);
             const digits = onlyDigits(cliente.cpfCnpj);
             const isPessoaJuridica = digits.length === 14;
+            const isHighCredit = creditLevelMap.get(digits) === "alto";
 
             return (
               <tr key={cliente.id} className="client-list__row">
                 <th scope="row" className="client-list__name-cell">
                   <div className="client-list__name-wrap">
-                    <span className="client-list__name">{cliente.nome}</span>
+                    <div className="client-list__name-row">
+                      <span className="client-list__name">{cliente.nome}</span>
+                      {isHighCredit ? (
+                        <span className="client-list__risk-tag">
+                          <AlertTriangle size={12} aria-hidden="true" />
+                          <span>Crédito alto</span>
+                        </span>
+                      ) : null}
+                    </div>
                     {cliente.nomeSocial ? (
                       <span className="client-list__social-name">
                         Nome social: {cliente.nomeSocial}
