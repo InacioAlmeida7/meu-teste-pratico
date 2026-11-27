@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowUpDown,
   Building2,
+  Download,
   IdCard,
   Search,
   X,
@@ -32,6 +33,8 @@ interface SearchToolbarProps {
   onSortDirectionChange: (value: SortDirection) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  onExportCsv: () => void;
+  canExportCsv: boolean;
 }
 
 const DOCUMENT_TYPE_OPTIONS: SelectOption[] = [
@@ -72,6 +75,8 @@ export function SearchToolbar({
   onSortDirectionChange,
   hasActiveFilters,
   onClearFilters,
+  onExportCsv,
+  canExportCsv,
 }: SearchToolbarProps) {
   const agencyOptions = useMemo<SelectOption[]>(() => {
     const sorted = [...agencias].sort((a, b) => a.codigo - b.codigo);
@@ -189,8 +194,8 @@ export function SearchToolbar({
           <span>Somente uso de crédito alto</span>
         </label>
 
-        {hasActiveFilters ? (
-          <div className="search-toolbar__actions">
+        <div className="search-toolbar__actions">
+          {hasActiveFilters ? (
             <button
               type="button"
               className="btn btn-ghost"
@@ -198,8 +203,18 @@ export function SearchToolbar({
             >
               Limpar filtros
             </button>
-          </div>
-        ) : null}
+          ) : null}
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onExportCsv}
+            disabled={!canExportCsv}
+          >
+            <Download size={16} aria-hidden="true" />
+            <span>Exportar CSV</span>
+          </button>
+        </div>
       </div>
     </div>
   );

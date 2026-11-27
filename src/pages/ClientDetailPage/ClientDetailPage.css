@@ -46,7 +46,16 @@
   gap: var(--space-4);
 }
 
-.detail-hero__back-link {
+.detail-hero__top-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.detail-hero__back-link,
+.detail-hero__print-btn {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -64,9 +73,17 @@
     border-color var(--transition-fast);
 }
 
-.detail-hero__back-link:hover {
+.detail-hero__back-link:hover,
+.detail-hero__print-btn:hover {
   background-color: var(--color-hero-surface-hover);
   border-color: var(--color-hero-border-strong);
+}
+
+@media (pointer: coarse) {
+  .detail-hero__back-link,
+  .detail-hero__print-btn {
+    min-block-size: 2.75rem;
+  }
 }
 
 /* O contorno azul padrão some sobre o gradiente azul; no hero o foco fica branco. */
@@ -370,6 +387,10 @@
   display: grid;
   gap: var(--space-4);
   padding: var(--space-5);
+}
+
+.detail-tabs__panel[hidden] {
+  display: none;
 }
 
 .detail-tabs__panel:has(> .detail-sheet__split) {
@@ -877,5 +898,159 @@
 @media (min-width: 1024px) {
   .client-detail__accounts-grid--three {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  .client-detail {
+    display: block;
+  }
+
+  .client-detail__body {
+    display: block;
+    margin-block-start: var(--space-4);
+    opacity: 1 !important;
+  }
+
+  .detail-hero {
+    background: var(--color-bg-surface);
+    border-bottom: 2px solid var(--color-border-subtle);
+    color: var(--color-text-primary);
+    padding-block: var(--space-4);
+  }
+
+  .detail-hero__top-bar,
+  .detail-tabs__list,
+  .detail-tabs__panel--overview,
+  .detail-overview__link-btn,
+  .detail-overview__account-btn,
+  .account-card__footer,
+  .account-drawer,
+  .client-detail__section-hint {
+    display: none !important;
+  }
+
+  .detail-hero__avatar {
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: none;
+  }
+
+  .detail-hero__avatar-dot {
+    display: none;
+  }
+
+  .detail-hero__title {
+    color: var(--color-text-strong);
+  }
+
+  .detail-hero__social-name,
+  .detail-hero__social-name span,
+  .detail-hero__meta {
+    color: var(--color-text-secondary);
+  }
+
+  .hero-kpi-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-color: var(--color-border-subtle);
+    background-color: var(--color-bg-table-head);
+    backdrop-filter: none;
+  }
+
+  .hero-kpi {
+    border-bottom: 0;
+    border-inline-end: 1px solid var(--color-border-divider);
+  }
+
+  .hero-kpi:last-child {
+    border-inline-end: 0;
+  }
+
+  .hero-kpi__label,
+  .hero-kpi__sub,
+  .hero-kpi__icon {
+    color: var(--color-text-secondary);
+  }
+
+  .hero-kpi__value {
+    color: var(--color-text-strong);
+  }
+
+  .hero-kpi__value--positive,
+  .hero-kpi__icon--green {
+    color: var(--color-accent-green-text);
+  }
+
+  .hero-kpi__value--negative {
+    color: var(--color-error-text);
+  }
+
+  .detail-sheet {
+    display: block;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .detail-tabs__panel--profile {
+    display: block !important;
+    opacity: 1 !important;
+    padding: 0;
+    margin-block-end: var(--space-4);
+  }
+
+  .detail-tabs__panel--accounts {
+    display: block !important;
+    opacity: 1 !important;
+    padding: 0;
+  }
+
+  .detail-sheet__section {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .detail-sheet__split {
+    display: grid;
+    grid-template-columns: 1.65fr 1fr;
+    gap: var(--space-4);
+  }
+
+  .detail-sheet__split-main,
+  .detail-sheet__split-side {
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+  }
+
+  .client-detail__accounts-grid--two,
+  .client-detail__accounts-grid--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .detail-sheet__split-side,
+  .client-detail__credit-overview,
+  .account-card,
+  .agency-card,
+  .detail-overview__account-row {
+    break-inside: avoid;
+  }
+
+  .client-detail__section-header {
+    break-after: avoid;
+  }
+
+  .client-detail__print-heading {
+    position: static !important;
+    clip-path: none !important;
+    overflow: visible !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 0 var(--space-3) 0 !important;
+    white-space: normal !important;
+    color: var(--color-text-strong);
+    font-size: var(--text-base);
+    font-weight: var(--font-bold);
   }
 }

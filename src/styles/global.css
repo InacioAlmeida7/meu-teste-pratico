@@ -319,3 +319,37 @@ svg {
     min-block-size: 2.75rem;
   }
 }
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .site-header,
+  .site-footer,
+  .skip-link,
+  .app-toast {
+    display: none !important;
+  }
+
+  body {
+    min-block-size: auto;
+    background-color: var(--color-bg-surface);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .app-shell,
+  .app-main {
+    display: block;
+    min-block-size: auto;
+    padding-block: 0;
+  }
+}

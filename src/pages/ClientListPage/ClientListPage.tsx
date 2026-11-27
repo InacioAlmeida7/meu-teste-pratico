@@ -8,6 +8,7 @@ import { useBankData } from "../../context/useBankData";
 import { useClientFilters } from "../../hooks/useClientFilters";
 import type { Agencia } from "../../types/models";
 import { buildCreditUsageLevelMap } from "../../utils/credit";
+import { downloadClientsCsv } from "../../utils/exporters";
 import "./ClientListPage.css";
 
 /**
@@ -36,6 +37,7 @@ export function ClientListPage() {
     startItem,
     endItem,
     hasActiveFilters,
+    sortedClientes,
     paginatedClientes,
     setSearchQuery,
     setSelectedAgencia,
@@ -147,6 +149,8 @@ export function ClientListPage() {
               onSortDirectionChange={setSortDirection}
               hasActiveFilters={hasActiveFilters}
               onClearFilters={clearFilters}
+              onExportCsv={() => downloadClientsCsv(sortedClientes, agenciaMap)}
+              canExportCsv={sortedClientes.length > 0}
             />
 
             {/* Live region sempre montada: anuncia o resultado de cada busca, filtro ou ordenação. */}

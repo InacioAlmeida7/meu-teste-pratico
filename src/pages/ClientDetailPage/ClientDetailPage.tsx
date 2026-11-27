@@ -24,6 +24,7 @@ import {
   Mail,
   MapPin,
   PiggyBank,
+  Printer,
   ShieldAlert,
   User,
   UserX,
@@ -337,13 +338,10 @@ export function ClientDetailPage() {
     financialSummary.creditUsage.percentualUsado,
   );
 
-  const creditUsageMeter = (
+  const renderCreditUsageMeter = (labelId: string) => (
     <div className="client-detail__credit-overview">
       <div className="client-detail__credit-overview-head">
-        <span
-          id="credit-usage-label"
-          className="client-detail__credit-overview-label"
-        >
+        <span id={labelId} className="client-detail__credit-overview-label">
           Uso consolidado do limite de crédito
         </span>
         <span
@@ -368,7 +366,7 @@ export function ClientDetailPage() {
       <div
         className="client-detail__credit-overview-track"
         role="meter"
-        aria-labelledby="credit-usage-label"
+        aria-labelledby={labelId}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={roundedUsagePercent}
@@ -609,7 +607,7 @@ export function ClientDetailPage() {
           </button>
         </div>
 
-        {creditUsageMeter}
+        {renderCreditUsageMeter("overview-credit-usage-label")}
 
         {clienteContas.length === 0 ? noAccountsMessage : accountsList}
       </section>
@@ -644,7 +642,7 @@ export function ClientDetailPage() {
         </span>
       </div>
 
-      {creditUsageMeter}
+      {renderCreditUsageMeter("accounts-credit-usage-label")}
 
       {clienteContas.length === 0 ? (
         noAccountsMessage
@@ -671,7 +669,10 @@ export function ClientDetailPage() {
         className="detail-sheet__split-main"
         aria-labelledby="personal-data-heading"
       >
-        <h2 id="personal-data-heading" className="sr-only">
+        <h2
+          id="personal-data-heading"
+          className="sr-only client-detail__print-heading"
+        >
           Dados Cadastrais
         </h2>
 
@@ -748,7 +749,10 @@ export function ClientDetailPage() {
         className="detail-sheet__split-side"
         aria-labelledby="agency-heading"
       >
-        <h2 id="agency-heading" className="sr-only">
+        <h2
+          id="agency-heading"
+          className="sr-only client-detail__print-heading"
+        >
           Agência Vinculada
         </h2>
         <AgencyCard codigoAgencia={cliente.codigoAgencia} agencia={agencia} />
@@ -760,12 +764,23 @@ export function ClientDetailPage() {
     <div className="client-detail">
       <section className="detail-hero" aria-labelledby="client-profile-heading">
         <div className="container detail-hero__inner">
-          <nav aria-label="Navegação secundária">
-            <Link to={backTo} className="detail-hero__back-link">
-              <ArrowLeft size={16} aria-hidden="true" />
-              <span>Voltar para a lista</span>
-            </Link>
-          </nav>
+          <div className="detail-hero__top-bar">
+            <nav aria-label="Navegação secundária">
+              <Link to={backTo} className="detail-hero__back-link">
+                <ArrowLeft size={16} aria-hidden="true" />
+                <span>Voltar para a lista</span>
+              </Link>
+            </nav>
+
+            <button
+              type="button"
+              className="detail-hero__print-btn"
+              onClick={() => window.print()}
+            >
+              <Printer size={16} aria-hidden="true" />
+              <span>Imprimir ficha</span>
+            </button>
+          </div>
 
           <div className="detail-hero__main">
             <div className="detail-hero__profile">
@@ -881,7 +896,7 @@ export function ClientDetailPage() {
                   type="button"
                   role="tab"
                   aria-selected={isSelected}
-                  aria-controls={isSelected ? "detail-tabpanel" : undefined}
+                  aria-controls={`detail-tabpanel-${tab.id}`}
                   tabIndex={isSelected ? 0 : -1}
                   className="detail-tabs__tab"
                   onClick={() => activateTab(tab.id, false)}
@@ -906,17 +921,33 @@ export function ClientDetailPage() {
           </div>
 
           <div
-            key={activeTab}
-            id="detail-tabpanel"
+            id="detail-tabpanel-overview"
             role="tabpanel"
-            aria-labelledby={`detail-tab-${activeTab}`}
-            className="detail-tabs__panel"
+            aria-labelledby="detail-tab-overview"
+            hidden={activeTab !== "overview"}
+            className="detail-tabs__panel detail-tabs__panel--overview"
           >
-            {activeTab === "overview"
-              ? overviewSection
-              : activeTab === "accounts"
-                ? accountsSection
-                : profileAndAgencySection}
+            {overviewSection}
+          </div>
+
+          <div
+            id="detail-tabpanel-profile"
+            role="tabpanel"
+            aria-labelledby="detail-tab-profile"
+            hidden={activeTab !== "profile"}
+            className="detail-tabs__panel detail-tabs__panel--profile"
+          >
+            {profileAndAgencySection}
+          </div>
+
+          <div
+            id="detail-tabpanel-accounts"
+            role="tabpanel"
+            aria-labelledby="detail-tab-accounts"
+            hidden={activeTab !== "accounts"}
+            className="detail-tabs__panel detail-tabs__panel--accounts"
+          >
+            {accountsSection}
           </div>
         </div>
       </div>
