@@ -16,19 +16,24 @@ import { useBankData } from "./context/useBankData";
 import { useTheme } from "./hooks/useTheme";
 import { ClientListPage } from "./pages/ClientListPage/ClientListPage";
 import type { Cliente } from "./types/models";
+import { loadChunkWithRecovery } from "./utils/chunkRecovery";
 import { onlyDigits } from "./utils/normalizers";
 
 // Detalhe e formulário (React Hook Form + Zod + calendário) só são baixados quando usados,
 // mantendo o bundle inicial menor.
 const ClientDetailPage = lazy(() =>
-  import("./pages/ClientDetailPage/ClientDetailPage").then((module) => ({
-    default: module.ClientDetailPage,
-  })),
+  loadChunkWithRecovery(() =>
+    import("./pages/ClientDetailPage/ClientDetailPage").then((module) => ({
+      default: module.ClientDetailPage,
+    })),
+  ),
 );
 const ClientFormModal = lazy(() =>
-  import("./components/ClientFormModal/ClientFormModal").then((module) => ({
-    default: module.ClientFormModal,
-  })),
+  loadChunkWithRecovery(() =>
+    import("./components/ClientFormModal/ClientFormModal").then((module) => ({
+      default: module.ClientFormModal,
+    })),
+  ),
 );
 
 const TOAST_DURATION_MS = 7000;
