@@ -114,7 +114,9 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
     │   ├── normalizers.ts            # Conversão segura CSV -> tipos da aplicação
     │   ├── formatters.ts             # Formatação BRL, datas, CPF/CNPJ
     │   ├── validators.ts             # Validação de CPF e CNPJ (dígitos verificadores)
-    │   └── credit.ts                 # Uso consolidado de limite e nível de risco de crédito
+    │   ├── credit.ts                 # Uso consolidado de limite e nível de risco de crédito
+    │   ├── exporters.ts              # Geração e download CSV UTF-8 com delimitador `;`
+    │   └── dataQuality.ts            # Detecção de inconsistências e avisos de base
     ├── services/
     │   └── bankApi.ts                # Fetch API + Response.text() + PapaParse + mapeamento
     ├── schemas/
@@ -151,6 +153,8 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * **Ordenação por nome:** o cabeçalho **Nome** é um botão que alterna A–Z / Z–A (`aria-sort`). Padrão: A–Z, ordem alfabética pt-BR sem diferenciar acentos. No mobile, onde o cabeçalho fica oculto, um campo "Ordenar por" oferece as mesmas duas opções.
    * **Regra obrigatória:** Qualquer alteração na busca, filtro ou ordenação deve resetar automaticamente a página atual para **1**.
    * **Sincronização com a URL:** Busca (`q`), agência (`agencia`), tipo de documento (`doc`: `cpf` | `cnpj`), uso de crédito alto (`credito`: `alto`), ordenação (`ordem`: `desc`) e página (`pagina`) ficam sincronizados via `useSearchParams`. Valores padrão não aparecem na URL, parâmetros inválidos caem no padrão sem erro, digitar na busca usa `replace: true` e mudanças de filtro/ordenação/página criam entrada no histórico.
+   * **Exportação CSV:** Botão **"Exportar CSV"** exporta toda a listagem filtrada e ordenada (`sortedClientes`, não apenas a página atual) via `Papa.unparse` (`;` e BOM UTF-8 `\uFEFF`, arquivo `clientes-AAAA-MM-DD.csv`), desabilitado quando não há resultados.
+   * **Qualidade de Dados (`DataQualityNotice`):** Painel expansível (`<details>`) exibido apenas quando há inconsistências detectadas por `findDataIssues` (contas órfãs, agências inexistentes, datas inválidas, estados civis ausentes e avisos de documento com DV inválido), agrupadas por tipo com link para o cliente.
 3. **Listagem Responsiva (`ClientList`):**
    * Exibir apenas os dados principais: **Nome** (com indicador discreto de Nome Social se houver e tag compacta **"Crédito alto"** para clientes com uso $\ge 80\%$), **CPF/CNPJ formatado**, **E-mail**, **Agência** (código/nome) e botão/ação **"Ver detalhes"** (preservando os query params da listagem para o retorno).
    * **Desktop (`>= 768px`):** Tabela HTML semântica (`<table>`, `<thead>`, `<th scope="col">`, `<caption>` com `.sr-only`), linhas clicáveis ou com ação clara.
@@ -187,7 +191,7 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Insere o novo cliente na lista em memória (`BankDataContext`), limpa os filtros (ele aparece na sua posição conforme a ordenação ativa), fecha o modal, reseta o formulário e exibe uma notificação acessível (`role="status"`) no canto inferior direito, com link **"Ver cliente"**. Ela some sozinha após 7 s, com o tempo pausado enquanto o mouse ou o foco estiverem sobre ela.
 
 ### Rota `/clientes/:id` — Detalhes do Cliente (`ClientDetailPage`)
-1. **Navegação:** Link/botão **"← Voltar para a lista"** no topo, restaurando os filtros e a página preservados na navegação de entrada. Se o `id` da URL não existir (ex.: cliente recém-cadastrado após F5), exibir estado "Cliente não encontrado" com botão para voltar à listagem.
+1. **Navegação e Impressão:** Link/botão **"← Voltar para a lista"** no topo (restaurando os filtros e a página preservados na navegação de entrada) e botão **"Imprimir ficha"** (`window.print()`). Em `@media print`, cabeçalho, rodapé, abas, botões e drawer ficam ocultos e a ficha exibe simultaneamente dados cadastrais, agência e contas em layout claro. Se o `id` da URL não existir (ex.: cliente recém-cadastrado após F5), exibir estado "Cliente não encontrado" com botão para voltar à listagem.
 2. **Seção 1 — Dados Cadastrais Completos:** Exibir todas as propriedades do cliente (`nome`, `nomeSocial` se houver, `cpfCnpj`, `rg` ou `"Não informado"`, `dataNascimento` formatada, `estadoCivil` ou `"Não informado"`, `email`, `endereco`, `rendaAnual` e `patrimonio` formatados em BRL).
 3. **Seção 2 — Agência Vinculada (`AgencyCard`):** Cruzamento via `cliente.codigoAgencia === agencia.codigo`. Exibir `nome`, `codigo`, `endereco` e `id`.
 4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Exibir medidor consolidado acessível (`role="meter"`, `aria-valuenow`, texto `"X% do limite utilizado"` e badge com ícone + nível `"sem-credito" | "baixo" | "moderado" | "alto"`, via `getCreditUsage`). Arranjo: 1 a 3 contas em cards lado a lado, 4 contas em grade 2×2 e 5 ou mais em lista compacta. Para cada conta, exibir:

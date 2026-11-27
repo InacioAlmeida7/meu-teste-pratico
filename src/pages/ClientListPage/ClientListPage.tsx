@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Building2, Users, Wallet } from "lucide-react";
 import { ClientList } from "../../components/ClientList/ClientList";
+import { DataQualityNotice } from "../../components/DataQualityNotice/DataQualityNotice";
 import { Pagination } from "../../components/Pagination/Pagination";
 import { SearchToolbar } from "../../components/SearchToolbar/SearchToolbar";
 import { StatusMessage } from "../../components/StatusMessage/StatusMessage";
@@ -8,6 +9,7 @@ import { useBankData } from "../../context/useBankData";
 import { useClientFilters } from "../../hooks/useClientFilters";
 import type { Agencia } from "../../types/models";
 import { buildCreditUsageLevelMap } from "../../utils/credit";
+import { findDataIssues } from "../../utils/dataQuality";
 import { downloadClientsCsv } from "../../utils/exporters";
 import "./ClientListPage.css";
 
@@ -23,6 +25,11 @@ export function ClientListPage() {
   const creditLevelMap = useMemo(
     () => buildCreditUsageLevelMap(contas),
     [contas],
+  );
+
+  const dataIssues = useMemo(
+    () => findDataIssues({ clientes, contas, agencias }),
+    [clientes, contas, agencias],
   );
 
   const {
@@ -152,6 +159,8 @@ export function ClientListPage() {
               onExportCsv={() => downloadClientsCsv(sortedClientes, agenciaMap)}
               canExportCsv={sortedClientes.length > 0}
             />
+
+            <DataQualityNotice issues={dataIssues} />
 
             {/* Live region sempre montada: anuncia o resultado de cada busca, filtro ou ordenação. */}
             <p className="sr-only" role="status">
