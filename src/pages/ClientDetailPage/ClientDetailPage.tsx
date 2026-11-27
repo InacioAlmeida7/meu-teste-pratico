@@ -12,16 +12,19 @@ import {
   Briefcase,
   Building2,
   Calendar,
+  CheckCircle2,
   ChevronRight,
   CreditCard,
   FileText,
   Heart,
   IdCard,
+  Info,
   Landmark,
   LayoutGrid,
   Mail,
   MapPin,
   PiggyBank,
+  ShieldAlert,
   User,
   UserX,
   Wallet,
@@ -33,6 +36,10 @@ import { AccountDrawer } from "../../components/AccountDrawer/AccountDrawer";
 import { AgencyCard } from "../../components/AgencyCard/AgencyCard";
 import { StatusMessage } from "../../components/StatusMessage/StatusMessage";
 import { useBankData } from "../../context/useBankData";
+import {
+  getCreditUsage,
+  type CreditUsageLevel,
+} from "../../utils/credit";
 import {
   formatCpfCnpj,
   formatCurrencyBRL,
@@ -109,6 +116,16 @@ function getAccountsGridClass(count: number): string {
 
 const ACCOUNTS_LIST_THRESHOLD = 5;
 
+const CREDIT_LEVEL_META: Record<
+  CreditUsageLevel,
+  { label: string; icon: LucideIcon }
+> = {
+  "sem-credito": { label: "Sem crédito", icon: Info },
+  baixo: { label: "Uso baixo", icon: CheckCircle2 },
+  moderado: { label: "Uso moderado", icon: AlertTriangle },
+  alto: { label: "Uso alto", icon: ShieldAlert },
+};
+
 /**
  * Recupera a query string da listagem preservada no `state` da navegação
  * para que "Voltar para a lista" restaure busca, filtros, ordenação e página.
@@ -171,28 +188,16 @@ export function ClientDetailPage() {
 
   const financialSummary = useMemo(() => {
     let totalSaldo = 0;
-    let totalLimiteCredito = 0;
-    let totalCreditoDisponivel = 0;
 
     for (const conta of clienteContas) {
       totalSaldo += conta.saldo;
-      totalLimiteCredito += conta.limiteCredito;
-      totalCreditoDisponivel += conta.creditoDisponivel;
     }
 
-    const availablePercent =
-      totalLimiteCredito > 0
-        ? Math.min(
-            100,
-            Math.max(0, (totalCreditoDisponivel / totalLimiteCredito) * 100),
-          )
-        : 0;
+    const creditUsage = getCreditUsage(clienteContas);
 
     return {
       totalSaldo,
-      totalLimiteCredito,
-      totalCreditoDisponivel,
-      availablePercent,
+      creditUsage,
     };
   }, [clienteContas]);
 
@@ -325,6 +330,57 @@ export function ClientDetailPage() {
         : "hero-kpi__value tabular-nums";
 
   const accountsGridClass = getAccountsGridClass(clienteContas.length);
+
+  const creditLevelMeta = CREDIT_LEVEL_META[financialSummary.creditUsage.nivel];
+  const CreditLevelIcon = creditLevelMeta.icon;
+  const roundedUsagePercent = Math.round(
+    financialSummary.creditUsage.percentualUsado,
+  );
+
+  const creditUsageMeter = (
+    <div className="client-detail__credit-overview">
+      <div className="client-detail__credit-overview-head">
+        <span
+          id="credit-usage-label"
+          className="client-detail__credit-overview-label"
+        >
+          Uso consolidado do limite de crédito
+        </span>
+        <span
+          className={`client-detail__credit-badge client-detail__credit-badge--${financialSummary.creditUsage.nivel}`}
+        >
+          <CreditLevelIcon size={13} aria-hidden="true" />
+          <span>{creditLevelMeta.label}</span>
+        </span>
+      </div>
+
+      <div className="client-detail__credit-overview-meta">
+        <strong className="client-detail__credit-overview-percent tabular-nums">
+          {roundedUsagePercent}% do limite utilizado
+        </strong>
+        <span className="client-detail__credit-overview-ratio tabular-nums">
+          {financialSummary.creditUsage.limiteTotal > 0
+            ? `${formatCurrencyBRL(financialSummary.creditUsage.usado)} de ${formatCurrencyBRL(financialSummary.creditUsage.limiteTotal)}`
+            : "Sem limite de crédito contratado"}
+        </span>
+      </div>
+
+      <div
+        className="client-detail__credit-overview-track"
+        role="meter"
+        aria-labelledby="credit-usage-label"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={roundedUsagePercent}
+        aria-valuetext={`${roundedUsagePercent}% do limite utilizado — ${creditLevelMeta.label}`}
+      >
+        <div
+          className={`client-detail__credit-overview-fill client-detail__credit-overview-fill--${financialSummary.creditUsage.nivel}`}
+          style={{ width: `${financialSummary.creditUsage.percentualUsado}%` }}
+        />
+      </div>
+    </div>
+  );
 
   const noAccountsMessage = (
     <div className="client-detail__empty-accounts">
@@ -553,6 +609,8 @@ export function ClientDetailPage() {
           </button>
         </div>
 
+        {creditUsageMeter}
+
         {clienteContas.length === 0 ? noAccountsMessage : accountsList}
       </section>
     </>
@@ -586,33 +644,7 @@ export function ClientDetailPage() {
         </span>
       </div>
 
-      {financialSummary.totalLimiteCredito > 0 ? (
-        <div className="client-detail__credit-overview">
-          <div className="client-detail__credit-overview-head">
-            <span className="client-detail__credit-overview-label">
-              Uso consolidado de limite nas contas
-            </span>
-            <span className="client-detail__credit-overview-ratio tabular-nums">
-              {Math.round(financialSummary.availablePercent)}% disponível (
-              {formatCurrencyBRL(financialSummary.totalCreditoDisponivel)} de{" "}
-              {formatCurrencyBRL(financialSummary.totalLimiteCredito)})
-            </span>
-          </div>
-          <div
-            className="client-detail__credit-overview-track"
-            role="progressbar"
-            aria-label="Crédito disponível consolidado"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(financialSummary.availablePercent)}
-          >
-            <div
-              className="client-detail__credit-overview-fill"
-              style={{ width: `${financialSummary.availablePercent}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
+      {creditUsageMeter}
 
       {clienteContas.length === 0 ? (
         noAccountsMessage
@@ -798,11 +830,13 @@ export function ClientDetailPage() {
                   <span>Crédito Disponível</span>
                 </dt>
                 <dd className="hero-kpi__value tabular-nums">
-                  {formatCurrencyBRL(financialSummary.totalCreditoDisponivel)}
+                  {formatCurrencyBRL(
+                    financialSummary.creditUsage.disponivelTotal,
+                  )}
                 </dd>
                 <dd className="hero-kpi__sub tabular-nums">
-                  {financialSummary.totalLimiteCredito > 0
-                    ? `de ${formatCurrencyBRL(financialSummary.totalLimiteCredito)} em limites`
+                  {financialSummary.creditUsage.limiteTotal > 0
+                    ? `de ${formatCurrencyBRL(financialSummary.creditUsage.limiteTotal)} em limites`
                     : "Sem limite contratado"}
                 </dd>
               </div>

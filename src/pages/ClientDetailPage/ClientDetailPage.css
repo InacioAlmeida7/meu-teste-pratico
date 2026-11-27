@@ -431,7 +431,7 @@
 .client-detail__credit-overview-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
@@ -442,6 +442,55 @@
   font-weight: var(--font-semibold);
 }
 
+.client-detail__credit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.client-detail__credit-badge--sem-credito {
+  border-color: var(--color-border-subtle);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+
+.client-detail__credit-badge--baixo {
+  border-color: var(--color-success-border);
+  background-color: var(--color-success-bg);
+  color: var(--color-accent-green-text);
+}
+
+.client-detail__credit-badge--moderado {
+  border-color: var(--color-warning-border);
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.client-detail__credit-badge--alto {
+  border-color: var(--color-error-border);
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.client-detail__credit-overview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+.client-detail__credit-overview-percent {
+  color: var(--color-text-strong);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+}
+
 .client-detail__credit-overview-ratio {
   color: var(--color-text-secondary);
   font-size: var(--text-xs);
@@ -450,6 +499,7 @@
 
 .client-detail__credit-overview-track {
   block-size: 0.625rem;
+  border: 1px solid var(--color-border-divider);
   border-radius: var(--radius-full);
   background-color: var(--color-bg-subtle);
   overflow: hidden;
@@ -460,6 +510,22 @@
   border-radius: var(--radius-full);
   background-color: var(--color-accent-green-bright);
   transform-origin: left center;
+}
+
+.client-detail__credit-overview-fill--sem-credito {
+  background-color: transparent;
+}
+
+.client-detail__credit-overview-fill--baixo {
+  background-color: var(--color-accent-green-bright);
+}
+
+.client-detail__credit-overview-fill--moderado {
+  background-color: var(--color-warning-text);
+}
+
+.client-detail__credit-overview-fill--alto {
+  background-color: var(--color-error-text);
 }
 
 @media (prefers-reduced-motion: no-preference) {
