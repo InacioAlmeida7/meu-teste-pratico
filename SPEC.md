@@ -121,7 +121,8 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
     ├── context/
     │   └── BankDataContext.tsx       # Estado em memória (clientes, contas, agencias, loading, error, addCliente, reload)
     ├── hooks/
-    │   └── useClientFilters.ts       # Lógica pura de busca, filtro e paginação (10 por página)
+    │   ├── useClientFilters.ts       # Busca, filtros, ordenação e paginação (10/página) sincronizados com URL
+    │   └── useTheme.ts               # Tema claro/escuro (localStorage + prefers-color-scheme)
     ├── components/
     │   ├── Header/                   # Header.tsx + Header.css
     │   ├── SearchToolbar/            # SearchToolbar.tsx + SearchToolbar.css (busca + filtro de agência + botão Novo Cliente)
@@ -148,8 +149,9 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Botão "Limpar filtros" exibido quando há busca ou filtro ativo.
    * **Ordenação por nome:** o cabeçalho **Nome** é um botão que alterna A–Z / Z–A (`aria-sort`). Padrão: A–Z, ordem alfabética pt-BR sem diferenciar acentos. No mobile, onde o cabeçalho fica oculto, um campo "Ordenar por" oferece as mesmas duas opções.
    * **Regra obrigatória:** Qualquer alteração na busca, filtro ou ordenação deve resetar automaticamente a página atual para **1**.
+   * **Sincronização com a URL:** Busca (`q`), agência (`agencia`), tipo de documento (`doc`: `cpf` | `cnpj`), ordenação (`ordem`: `desc`) e página (`pagina`) ficam sincronizados via `useSearchParams`. Valores padrão não aparecem na URL, parâmetros inválidos caem no padrão sem erro, digitar na busca usa `replace: true` e mudanças de filtro/ordenação/página criam entrada no histórico.
 3. **Listagem Responsiva (`ClientList`):**
-   * Exibir apenas os dados principais: **Nome** (com indicador discreto de Nome Social se houver), **CPF/CNPJ formatado**, **E-mail**, **Agência** (código/nome) e botão/ação **"Ver detalhes"**.
+   * Exibir apenas os dados principais: **Nome** (com indicador discreto de Nome Social se houver), **CPF/CNPJ formatado**, **E-mail**, **Agência** (código/nome) e botão/ação **"Ver detalhes"** (preservando os query params da listagem para o retorno).
    * **Desktop (`>= 768px`):** Tabela HTML semântica (`<table>`, `<thead>`, `<th scope="col">`, `<caption>` com `.sr-only`), linhas clicáveis ou com ação clara.
    * **Mobile (`< 768px`):** Layout em cards empilhados sem rolagem horizontal forçada.
 4. **Paginação (`Pagination`):**
@@ -184,7 +186,7 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Insere o novo cliente na lista em memória (`BankDataContext`), limpa os filtros (ele aparece na sua posição conforme a ordenação ativa), fecha o modal, reseta o formulário e exibe uma notificação acessível (`role="status"`) no canto inferior direito, com link **"Ver cliente"**. Ela some sozinha após 7 s, com o tempo pausado enquanto o mouse ou o foco estiverem sobre ela.
 
 ### Rota `/clientes/:id` — Detalhes do Cliente (`ClientDetailPage`)
-1. **Navegação:** Link/botão **"← Voltar para a lista"** no topo. Se o `id` da URL não existir (ex.: cliente recém-cadastrado após F5), exibir estado "Cliente não encontrado" com botão para voltar à listagem.
+1. **Navegação:** Link/botão **"← Voltar para a lista"** no topo, restaurando os filtros e a página preservados na navegação de entrada. Se o `id` da URL não existir (ex.: cliente recém-cadastrado após F5), exibir estado "Cliente não encontrado" com botão para voltar à listagem.
 2. **Seção 1 — Dados Cadastrais Completos:** Exibir todas as propriedades do cliente (`nome`, `nomeSocial` se houver, `cpfCnpj`, `rg` ou `"Não informado"`, `dataNascimento` formatada, `estadoCivil` ou `"Não informado"`, `email`, `endereco`, `rendaAnual` e `patrimonio` formatados em BRL).
 3. **Seção 2 — Agência Vinculada (`AgencyCard`):** Cruzamento via `cliente.codigoAgencia === agencia.codigo`. Exibir `nome`, `codigo`, `endereco` e `id`.
 4. **Seção 3 — Contas Bancárias (`AccountCard`):** Cruzamento via `onlyDigits(conta.cpfCnpjCliente) === onlyDigits(cliente.cpfCnpj)`. Arranjo: 1 a 3 contas em cards lado a lado, 4 contas em grade 2×2 e 5 ou mais em lista compacta. Para cada conta, exibir:
@@ -204,6 +206,7 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
   * Superfície (cards/tabelas/modal): Branco puro (`#ffffff`) com borda sutil (`#dce3ec`).
   * Texto principal: `#142130` | Texto secundário: `#4d5e70` (garantindo contraste `>= 4.5:1`).
   * Semânticas: Sucesso `#157347`, Erro `#b42318`, Alerta `#b54708`.
+* **Tema Escuro (`:root[data-theme="dark"]`):** Sobrescrita apenas de tokens em `@media screen` garantindo contraste WCAG AA (`>= 4.5:1`), alternância acessível no `Header` (`Sun`/`Moon`, `aria-pressed`), persistência em `localStorage` com fallback reativo a `prefers-color-scheme`, prevenção de flash (FOUC) via script síncrono no `index.html` e preservação do tema claro em `@media print`.
 * **Tipografia:** Pilha de fontes do sistema (`system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`) + `font-variant-numeric: tabular-nums` para valores monetários e CPFs alinhados.
 * **Espaçamento:** Escala consistente (`--space-1: 0.25rem` até `--space-8: 2rem`).
 

@@ -27,7 +27,7 @@
 
 .account-card--selected {
   border-color: var(--color-brand-primary);
-  box-shadow: 0 0 0 2px rgba(8, 20, 221, 0.14), var(--shadow-card-hover);
+  box-shadow: 0 0 0 2px var(--color-brand-ring), var(--shadow-card-hover);
 }
 
 @media (prefers-reduced-motion: no-preference) {

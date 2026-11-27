@@ -595,7 +595,7 @@
 .detail-overview__account-row--selected {
   border-color: var(--color-brand-primary);
   background-color: var(--color-bg-surface);
-  box-shadow: 0 0 0 2px rgba(8, 20, 221, 0.14);
+  box-shadow: 0 0 0 2px var(--color-brand-ring);
 }
 
 .detail-overview__account-main {

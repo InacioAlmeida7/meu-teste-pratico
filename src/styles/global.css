@@ -276,7 +276,7 @@ svg {
 
 .btn-brand-green {
   background-color: var(--color-btn-green);
-  color: var(--color-text-on-brand);
+  color: var(--color-btn-green-text);
   box-shadow: var(--shadow-sm);
 }
 

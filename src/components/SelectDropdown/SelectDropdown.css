@@ -28,7 +28,7 @@
 
 .select-dropdown__trigger--open {
   border-color: var(--color-brand-primary);
-  box-shadow: 0 0 0 3px rgba(8, 20, 221, 0.12);
+  box-shadow: 0 0 0 3px var(--color-brand-ring);
 }
 
 .select-dropdown__trigger[aria-invalid="true"] {
@@ -101,7 +101,7 @@
   border-radius: var(--radius-lg);
   background-color: var(--color-bg-surface);
   color: var(--color-text-primary);
-  box-shadow: 0 16px 38px rgba(17, 24, 39, 0.16);
+  box-shadow: var(--shadow-popover);
   opacity: 0;
   transition-property: opacity, transform, display, overlay;
   transition-duration: 0.18s;

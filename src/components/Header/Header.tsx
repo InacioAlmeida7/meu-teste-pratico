@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { Moon, Sun, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoBanestesBlue from "../../assets/logo-original-blue.png";
+import logoBanestesWhite from "../../assets/logo-original-white.png";
+import type { Theme } from "../../hooks/useTheme";
 import "./Header.css";
 
 interface HeaderProps {
+  theme: Theme;
+  onToggleTheme: () => void;
   onNewClient: () => void;
 }
 
 /**
  * Cabeçalho institucional sticky no padrão Banestes:
- * marca oficial à esquerda, identificação discreta do portal e botão verde
- * de ação principal ("Novo Cliente") alinhado à direita.
+ * marca oficial à esquerda, alternância de tema claro/escuro e botão verde
+ * de ação principal ("Novo Cliente") alinhados à direita.
  */
-export function Header({ onNewClient }: HeaderProps) {
+export function Header({ theme, onToggleTheme, onNewClient }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const isDark = theme === "dark";
 
   useEffect(() => {
     function handleScroll() {
@@ -41,7 +46,13 @@ export function Header({ onNewClient }: HeaderProps) {
           <img
             src={logoBanestesBlue}
             alt="Banestes — Juntos para o futuro"
-            className="site-header__logo"
+            className="site-header__logo site-header__logo--light"
+            height="38"
+          />
+          <img
+            src={logoBanestesWhite}
+            alt="Banestes — Juntos para o futuro"
+            className="site-header__logo site-header__logo--dark"
             height="38"
           />
         </Link>
@@ -56,14 +67,31 @@ export function Header({ onNewClient }: HeaderProps) {
             </span>
           </div>
 
-          <button
-            type="button"
-            className="btn btn-brand-green site-header__cta"
-            onClick={onNewClient}
-          >
-            <UserPlus size={18} aria-hidden="true" />
-            <span>Novo Cliente</span>
-          </button>
+          <div className="site-header__controls">
+            <button
+              type="button"
+              className="site-header__theme-toggle"
+              onClick={onToggleTheme}
+              aria-label="Tema escuro"
+              aria-pressed={isDark}
+              title={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
+            >
+              {isDark ? (
+                <Sun size={18} aria-hidden="true" />
+              ) : (
+                <Moon size={18} aria-hidden="true" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-brand-green site-header__cta"
+              onClick={onNewClient}
+            >
+              <UserPlus size={18} aria-hidden="true" />
+              <span>Novo Cliente</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>

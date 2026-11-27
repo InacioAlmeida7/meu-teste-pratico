@@ -13,6 +13,7 @@ import { Header } from "./components/Header/Header";
 import { StatusMessage } from "./components/StatusMessage/StatusMessage";
 import { BankDataProvider } from "./context/BankDataContext";
 import { useBankData } from "./context/useBankData";
+import { useTheme } from "./hooks/useTheme";
 import { ClientListPage } from "./pages/ClientListPage/ClientListPage";
 import type { Cliente } from "./types/models";
 import { onlyDigits } from "./utils/normalizers";
@@ -34,6 +35,7 @@ const TOAST_DURATION_MS = 7000;
 
 function AppLayout() {
   const { clientes, agencias, addCliente } = useBankData();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -80,6 +82,8 @@ function AppLayout() {
   return (
     <div className="app-shell">
       <Header
+        theme={theme}
+        onToggleTheme={toggleTheme}
         onNewClient={() => {
           setHasOpenedModal(true);
           setIsModalOpen(true);
@@ -117,6 +121,11 @@ function AppLayout() {
                 </p>
                 <Link
                   to={`/clientes/${encodeURIComponent(createdCliente.id)}`}
+                  state={
+                    location.pathname === "/"
+                      ? { fromSearch: location.search }
+                      : undefined
+                  }
                   className="app-toast__link"
                   onClick={closeToast}
                 >

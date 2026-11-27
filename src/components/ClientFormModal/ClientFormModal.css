@@ -7,7 +7,7 @@
   border-radius: var(--radius-lg);
   background-color: var(--color-bg-surface);
   color: var(--color-text-primary);
-  box-shadow: 0 20px 48px rgba(17, 24, 39, 0.2);
+  box-shadow: var(--shadow-modal);
   overflow: hidden;
   opacity: 0;
   transition-property: opacity, transform, display, overlay;

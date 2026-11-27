@@ -68,7 +68,7 @@
   border-radius: var(--radius-lg);
   background-color: var(--color-bg-surface);
   color: var(--color-text-primary);
-  box-shadow: 0 16px 40px rgba(17, 24, 39, 0.18);
+  box-shadow: var(--shadow-popover);
   opacity: 0;
   transition-property: opacity, transform, display, overlay;
   transition-duration: 0.18s;
@@ -123,6 +123,7 @@
   --rdp-nav_button-width: 2rem;
   --rdp-nav_button-height: 2rem;
   --rdp-nav-height: 2.5rem;
+  --rdp-weekday-opacity: 1;
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
