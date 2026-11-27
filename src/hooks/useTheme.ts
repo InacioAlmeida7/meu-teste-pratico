@@ -8,7 +8,6 @@ export interface ThemeResult {
 }
 
 export const THEME_STORAGE_KEY = "banestes-theme";
-const DARK_MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
 function readStoredTheme(): Theme | null {
   try {
@@ -27,28 +26,14 @@ function writeStoredTheme(theme: Theme): void {
   }
 }
 
-function getSystemTheme(): Theme {
-  if (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia(DARK_MEDIA_QUERY).matches
-  ) {
-    return "dark";
-  }
-  return "light";
-}
-
 /**
- * Gerencia o tema claro/escuro com prioridade para a preferência salva em `localStorage`
- * e fallback reativo para `prefers-color-scheme` do sistema operacional.
- * Sincroniza `data-theme` no `<html>` e `<meta name="color-scheme">` sem sobrescrever
- * estilos inline, permitindo que `@media print` preserve o tema claro na impressão.
+ * Gerencia o tema claro/escuro com tema claro (`"light"`) como padrão inicial
+ * e persistência da escolha do usuário em `localStorage`.
+ * Sincroniza `data-theme` no `<html>` e `<meta name="color-scheme">` sem estilos
+ * inline, permitindo que `@media print` preserve sempre o tema claro na impressão.
  */
 export function useTheme(): ThemeResult {
-  const [storedTheme, setStoredTheme] = useState<Theme | null>(readStoredTheme);
-  const [systemTheme, setSystemTheme] = useState<Theme>(getSystemTheme);
-
-  const theme: Theme = storedTheme ?? systemTheme;
+  const [theme, setTheme] = useState<Theme>(() => readStoredTheme() ?? "light");
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -56,34 +41,19 @@ export function useTheme(): ThemeResult {
       'meta[name="color-scheme"]',
     );
     if (meta) {
-      meta.content = storedTheme ?? "light dark";
+      meta.content = theme;
     }
-  }, [theme, storedTheme]);
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") {
-      return;
-    }
-    const mediaQuery = window.matchMedia(DARK_MEDIA_QUERY);
-    const handleChange = (event: MediaQueryListEvent) => {
-      setSystemTheme(event.matches ? "dark" : "light");
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== THEME_STORAGE_KEY) {
         return;
       }
-      setStoredTheme(
+      setTheme(
         event.newValue === "light" || event.newValue === "dark"
           ? event.newValue
-          : null,
+          : "light",
       );
     };
 
@@ -94,10 +64,12 @@ export function useTheme(): ThemeResult {
   }, []);
 
   const toggleTheme = useCallback(() => {
-    const nextTheme: Theme = theme === "dark" ? "light" : "dark";
-    writeStoredTheme(nextTheme);
-    setStoredTheme(nextTheme);
-  }, [theme]);
+    setTheme((prevTheme) => {
+      const nextTheme: Theme = prevTheme === "dark" ? "light" : "dark";
+      writeStoredTheme(nextTheme);
+      return nextTheme;
+    });
+  }, []);
 
   return { theme, toggleTheme };
 }

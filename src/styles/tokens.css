@@ -9,7 +9,7 @@
  * usam --color-btn-green (mesmo #337A21, 5.32:1).
  */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Marca e Ação */
   --color-brand-primary: #0814dd;

@@ -125,7 +125,7 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
     │   └── BankDataContext.tsx       # Estado em memória (clientes, contas, agencias, loading, error, addCliente, reload)
     ├── hooks/
     │   ├── useClientFilters.ts       # Busca, filtros, ordenação e paginação (10/página) sincronizados com URL
-    │   └── useTheme.ts               # Tema claro/escuro (localStorage + prefers-color-scheme)
+    │   └── useTheme.ts               # Tema claro padrão com alternância e persistência em localStorage
     ├── components/
     │   ├── Header/                   # Header.tsx + Header.css
     │   ├── SearchToolbar/            # SearchToolbar.tsx + SearchToolbar.css (busca + filtro de agência + botão Novo Cliente)
@@ -211,7 +211,7 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
   * Superfície (cards/tabelas/modal): Branco puro (`#ffffff`) com borda sutil (`#dce3ec`).
   * Texto principal: `#142130` | Texto secundário: `#4d5e70` (garantindo contraste `>= 4.5:1`).
   * Semânticas: Sucesso `#157347`, Erro `#b42318`, Alerta `#b54708`.
-* **Tema Escuro (`:root[data-theme="dark"]`):** Sobrescrita apenas de tokens em `@media screen` garantindo contraste WCAG AA (`>= 4.5:1`), alternância acessível no `Header` (`Sun`/`Moon`, `aria-pressed`), persistência em `localStorage` com fallback reativo a `prefers-color-scheme`, prevenção de flash (FOUC) via script síncrono no `index.html` e preservação do tema claro em `@media print`.
+* **Tema Escuro (`:root[data-theme="dark"]`):** Sobrescrita apenas de tokens em `@media screen` garantindo contraste WCAG AA (`>= 4.5:1`), tema claro como padrão inicial, alternância acessível no `Header` (`Sun`/`Moon`, `aria-pressed`), persistência em `localStorage`, prevenção de flash (FOUC) via script síncrono no `index.html` e preservação do tema claro em `@media print`.
 * **Tipografia:** Pilha de fontes do sistema (`system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`) + `font-variant-numeric: tabular-nums` para valores monetários e CPFs alinhados.
 * **Espaçamento:** Escala consistente (`--space-1: 0.25rem` até `--space-8: 2rem`).
 

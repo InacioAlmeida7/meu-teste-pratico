@@ -2,30 +2,19 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     <script>
       (function () {
         try {
           var stored = window.localStorage.getItem("banestes-theme");
-          var hasStored = stored === "light" || stored === "dark";
-          var theme = hasStored
-            ? stored
-            : window.matchMedia &&
-                window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light";
+          var theme = stored === "dark" ? "dark" : "light";
           document.documentElement.dataset.theme = theme;
           var meta = document.querySelector('meta[name="color-scheme"]');
           if (meta) {
-            meta.content = hasStored ? stored : "light dark";
+            meta.content = theme;
           }
         } catch (_err) {
-          var fallback =
-            window.matchMedia &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light";
-          document.documentElement.dataset.theme = fallback;
+          document.documentElement.dataset.theme = "light";
         }
       })();
     </script>
