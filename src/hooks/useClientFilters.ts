@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { Cliente } from "../types/models";
 import { onlyDigits, stripAccents } from "../utils/normalizers";
 
@@ -9,8 +10,45 @@ export type DocumentTypeFilter = "all" | "cpf" | "cnpj";
 /** Direção da ordenação por nome; a listagem sempre começa em A–Z. */
 export type SortDirection = "asc" | "desc";
 
+const PARAM_QUERY = "q";
+const PARAM_AGENCIA = "agencia";
+const PARAM_DOC = "doc";
+const PARAM_SORT = "ordem";
+const PARAM_PAGE = "pagina";
+
 // Ordem alfabética pt-BR ignorando acentos e caixa ("Álvaro" junto de "Alvaro").
 const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
+
+function parseAgenciaParam(raw: string | null): string {
+  if (!raw) {
+    return "";
+  }
+  const trimmed = raw.trim();
+  return /^\d+$/.test(trimmed) ? trimmed : "";
+}
+
+function parseDocumentTypeParam(raw: string | null): DocumentTypeFilter {
+  if (raw === "cpf" || raw === "cnpj") {
+    return raw;
+  }
+  return "all";
+}
+
+function parseSortDirectionParam(raw: string | null): SortDirection {
+  return raw === "desc" ? "desc" : "asc";
+}
+
+function parsePageParam(raw: string | null): number {
+  if (!raw) {
+    return 1;
+  }
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return 1;
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  return parsed >= 1 ? parsed : 1;
+}
 
 export interface ClientFiltersResult {
   searchQuery: string;
@@ -66,57 +104,115 @@ function matchesSearchQuery(
 
 /**
  * Gerencia busca textual/documento, filtro de tipo de documento (CPF/CNPJ),
- * filtro de agência, ordenação por nome e paginação de até 10 itens por página.
+ * filtro de agência, ordenação por nome e paginação de até 10 itens por página,
+ * sincronizados com os query params da URL (`q`, `agencia`, `doc`, `ordem`, `pagina`).
  * Qualquer mudança nos critérios de busca, filtro ou ordenação reinicia a página para 1,
- * evitando páginas vazias após refinar a consulta. Quando a base cresce (novo cadastro),
- * os filtros também são limpos para o cliente recém-criado não ficar oculto.
+ * evitando páginas vazias após refinar a consulta. Quando a base cresce após a carga inicial
+ * (novo cadastro), os filtros são limpos mantendo a ordenação para o cliente recém-criado
+ * não ficar oculto.
  */
 export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
-  const [searchQuery, setSearchQueryState] = useState<string>("");
-  const [selectedAgencia, setSelectedAgenciaState] = useState<string>("");
-  const [documentType, setDocumentTypeState] =
-    useState<DocumentTypeFilter>("all");
-  const [sortDirection, setSortDirectionState] = useState<SortDirection>("asc");
-  const [currentPage, setCurrentPageState] = useState<number>(1);
-  const [knownCount, setKnownCount] = useState<number>(clientes.length);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Ajuste de estado durante o render (padrão recomendado pelo React em vez de useEffect).
-  if (clientes.length !== knownCount) {
-    setKnownCount(clientes.length);
-    if (clientes.length > knownCount) {
-      setSearchQueryState("");
-      setSelectedAgenciaState("");
-      setDocumentTypeState("all");
-      setCurrentPageState(1);
+  const searchQuery = searchParams.get(PARAM_QUERY) ?? "";
+  const selectedAgencia = parseAgenciaParam(searchParams.get(PARAM_AGENCIA));
+  const documentType = parseDocumentTypeParam(searchParams.get(PARAM_DOC));
+  const sortDirection = parseSortDirectionParam(searchParams.get(PARAM_SORT));
+  const currentPage = parsePageParam(searchParams.get(PARAM_PAGE));
+
+  const updateParams = useCallback(
+    (mutate: (next: URLSearchParams) => void, replace: boolean) => {
+      const next = new URLSearchParams(searchParams);
+      mutate(next);
+      if (next.toString() === searchParams.toString()) {
+        return;
+      }
+      setSearchParams(next, { replace });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  // Só limpa filtros quando a contagem cresce após a carga inicial (novo cadastro em memória),
+  // preservando os parâmetros da URL ao abrir um link compartilhado enquanto `clientes` ainda carrega.
+  const previousCountRef = useRef<number>(clientes.length);
+  useEffect(() => {
+    const previousCount = previousCountRef.current;
+    previousCountRef.current = clientes.length;
+    if (previousCount > 0 && clientes.length > previousCount) {
+      updateParams((next) => {
+        next.delete(PARAM_QUERY);
+        next.delete(PARAM_AGENCIA);
+        next.delete(PARAM_DOC);
+        next.delete(PARAM_PAGE);
+      }, true);
     }
-  }
+  }, [clientes.length, updateParams]);
 
-  const setSearchQuery = useCallback((value: string) => {
-    setSearchQueryState(value);
-    setCurrentPageState(1);
-  }, []);
+  const setSearchQuery = useCallback(
+    (value: string) => {
+      updateParams((next) => {
+        if (value.length === 0) {
+          next.delete(PARAM_QUERY);
+        } else {
+          next.set(PARAM_QUERY, value);
+        }
+        next.delete(PARAM_PAGE);
+      }, true);
+    },
+    [updateParams],
+  );
 
-  const setSelectedAgencia = useCallback((value: string) => {
-    setSelectedAgenciaState(value);
-    setCurrentPageState(1);
-  }, []);
+  const setSelectedAgencia = useCallback(
+    (value: string) => {
+      const normalized = parseAgenciaParam(value);
+      updateParams((next) => {
+        if (normalized.length === 0) {
+          next.delete(PARAM_AGENCIA);
+        } else {
+          next.set(PARAM_AGENCIA, normalized);
+        }
+        next.delete(PARAM_PAGE);
+      }, false);
+    },
+    [updateParams],
+  );
 
-  const setDocumentType = useCallback((value: DocumentTypeFilter) => {
-    setDocumentTypeState(value);
-    setCurrentPageState(1);
-  }, []);
+  const setDocumentType = useCallback(
+    (value: DocumentTypeFilter) => {
+      updateParams((next) => {
+        if (value === "all") {
+          next.delete(PARAM_DOC);
+        } else {
+          next.set(PARAM_DOC, value);
+        }
+        next.delete(PARAM_PAGE);
+      }, false);
+    },
+    [updateParams],
+  );
 
-  const setSortDirection = useCallback((value: SortDirection) => {
-    setSortDirectionState(value);
-    setCurrentPageState(1);
-  }, []);
+  const setSortDirection = useCallback(
+    (value: SortDirection) => {
+      updateParams((next) => {
+        if (value === "asc") {
+          next.delete(PARAM_SORT);
+        } else {
+          next.set(PARAM_SORT, value);
+        }
+        next.delete(PARAM_PAGE);
+      }, false);
+    },
+    [updateParams],
+  );
 
   const clearFilters = useCallback(() => {
-    setSearchQueryState("");
-    setSelectedAgenciaState("");
-    setDocumentTypeState("all");
-    setCurrentPageState(1);
-  }, []);
+    updateParams((next) => {
+      next.delete(PARAM_QUERY);
+      next.delete(PARAM_AGENCIA);
+      next.delete(PARAM_DOC);
+      next.delete(PARAM_PAGE);
+    }, false);
+  }, [updateParams]);
 
   const filteredClientes = useMemo(() => {
     const trimmed = searchQuery.trim();
@@ -157,10 +253,16 @@ export function useClientFilters(clientes: Cliente[]): ClientFiltersResult {
 
   const setCurrentPage = useCallback(
     (page: number) => {
-      const clamped = Math.min(Math.max(1, page), totalPages);
-      setCurrentPageState(clamped);
+      const clamped = Math.min(Math.max(1, Math.trunc(page)), totalPages);
+      updateParams((next) => {
+        if (clamped <= 1) {
+          next.delete(PARAM_PAGE);
+        } else {
+          next.set(PARAM_PAGE, String(clamped));
+        }
+      }, false);
     },
-    [totalPages],
+    [totalPages, updateParams],
   );
 
   const paginatedClientes = useMemo(() => {

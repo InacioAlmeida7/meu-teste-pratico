@@ -27,7 +27,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { AccountCard } from "../../components/AccountCard/AccountCard";
 import { AccountDrawer } from "../../components/AccountDrawer/AccountDrawer";
 import { AgencyCard } from "../../components/AgencyCard/AgencyCard";
@@ -110,6 +110,20 @@ function getAccountsGridClass(count: number): string {
 const ACCOUNTS_LIST_THRESHOLD = 5;
 
 /**
+ * Recupera a query string da listagem preservada no `state` da navegação
+ * para que "Voltar para a lista" restaure busca, filtros, ordenação e página.
+ */
+function getReturnListPath(state: unknown): string {
+  if (typeof state === "object" && state !== null && "fromSearch" in state) {
+    const fromSearch = (state as { fromSearch?: unknown }).fromSearch;
+    if (typeof fromSearch === "string" && fromSearch.startsWith("?")) {
+      return `/${fromSearch}`;
+    }
+  }
+  return "/";
+}
+
+/**
  * Página de detalhes interativa do cliente (`/clientes/:id`).
  * Exibe faixa institucional Banestes com identidade + KPIs integrados,
  * folha única contínua com abas no topo (Visão Geral, Contas Bancárias,
@@ -118,6 +132,8 @@ const ACCOUNTS_LIST_THRESHOLD = 5;
 export function ClientDetailPage() {
   // `useParams` já entrega o segmento decodificado.
   const { id: targetId = "" } = useParams<{ id: string }>();
+  const location = useLocation();
+  const backTo = getReturnListPath(location.state);
   const { clientes, contas, agencias, isLoading, error, reload } =
     useBankData();
 
@@ -235,7 +251,7 @@ export function ClientDetailPage() {
   }
 
   const backLink = (
-    <Link to="/" className="client-detail__back-plain">
+    <Link to={backTo} className="client-detail__back-plain">
       <ArrowLeft size={16} aria-hidden="true" />
       <span>Voltar para a lista</span>
     </Link>
@@ -287,7 +303,7 @@ export function ClientDetailPage() {
             . Caso seja um cliente recém-cadastrado em memória, o registro é
             reiniciado ao recarregar a página.
           </p>
-          <Link to="/" className="btn btn-primary">
+          <Link to={backTo} className="btn btn-primary">
             Voltar para a listagem
           </Link>
         </div>
@@ -713,7 +729,7 @@ export function ClientDetailPage() {
       <section className="detail-hero" aria-labelledby="client-profile-heading">
         <div className="container detail-hero__inner">
           <nav aria-label="Navegação secundária">
-            <Link to="/" className="detail-hero__back-link">
+            <Link to={backTo} className="detail-hero__back-link">
               <ArrowLeft size={16} aria-hidden="true" />
               <span>Voltar para a lista</span>
             </Link>

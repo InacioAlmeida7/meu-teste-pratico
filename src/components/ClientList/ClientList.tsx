@@ -6,7 +6,7 @@ import {
   ChevronRight,
   Mail,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import type { SortDirection } from "../../hooks/useClientFilters";
 import type { Agencia, Cliente } from "../../types/models";
 import { formatCpfCnpj } from "../../utils/formatters";
@@ -32,6 +32,7 @@ export function ClientList({
   sortDirection,
   onSortDirectionChange,
 }: ClientListProps) {
+  const location = useLocation();
   const SortIcon = sortDirection === "asc" ? ArrowUp : ArrowDown;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -169,6 +170,7 @@ export function ClientList({
                 <td className="client-list__action-cell">
                   <Link
                     to={`/clientes/${encodeURIComponent(cliente.id)}`}
+                    state={{ fromSearch: location.search }}
                     className="client-list__detail-link"
                   >
                     <span>Ver detalhes</span>
