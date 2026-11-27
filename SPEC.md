@@ -116,7 +116,8 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
     │   ├── validators.ts             # Validação de CPF e CNPJ (dígitos verificadores)
     │   ├── credit.ts                 # Uso consolidado de limite e nível de risco de crédito
     │   ├── exporters.ts              # Geração e download CSV UTF-8 com delimitador `;`
-    │   └── dataQuality.ts            # Detecção de inconsistências e avisos de base
+    │   ├── dataQuality.ts            # Detecção de inconsistências e avisos de base
+    │   └── agencyStats.ts            # Agregação O(n) de indicadores por agência
     ├── services/
     │   └── bankApi.ts                # Fetch API + Response.text() + PapaParse + mapeamento
     ├── schemas/
@@ -137,7 +138,8 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
     │   └── StatusMessage/            # StatusMessage.tsx + StatusMessage.css (loading skeleton, erro com retry, empty state)
     └── pages/
         ├── ClientListPage/           # ClientListPage.tsx + ClientListPage.css
-        └── ClientDetailPage/         # ClientDetailPage.tsx + ClientDetailPage.css
+        ├── ClientDetailPage/         # ClientDetailPage.tsx + ClientDetailPage.css
+        └── AgenciesPage/             # AgenciesPage.tsx + AgenciesPage.css (lazy-loaded)
 ```
 
 ---
@@ -198,6 +200,11 @@ Máximo de 2 níveis de pastas dentro de `src/`. Fluxo unidirecional:
    * Badge diferenciando **Conta Corrente** e **Conta Poupança**;
    * **Saldo** (destaque visual sutil para saldo positivo vs. negativo);
    * **Limite de Crédito** e **Crédito Disponível** (com barra visual simples em CSS mostrando proporção utilizada/disponível quando `limiteCredito > 0`).
+
+### Rota `/agencias` — Indicadores por Agência (`AgenciesPage`, lazy-loaded)
+1. **Navegação:** Link **"Agências"** no `Header` (junto de **"Clientes"**, com `aria-current="page"`).
+2. **Agregação (`computeAgencyStats` / `computeAgencyTotals`):** Cruzamento O(n) via `Map` indexado por `onlyDigits(cpfCnpj)` agrupando clientes, contas, saldo total, limite total e crédito disponível por agência (incluindo agências sem clientes zeradas e o grupo `"Agência não localizada"` quando houver códigos ausentes na planilha de agências).
+3. **Visualização:** Cards de resumo financeiro, gráfico horizontal em CSS puro (saldo por agência proporcional ao maior saldo em valor absoluto) e tabela semântica ordenável por coluna (`aria-sort`), com links diretos para `/?agencia=CODIGO` e estados `StatusMessage` (`loading`, `error`, `empty`).
 
 ---
 

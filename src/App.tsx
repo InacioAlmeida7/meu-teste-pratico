@@ -28,6 +28,13 @@ const ClientDetailPage = lazy(() =>
     })),
   ),
 );
+const AgenciesPage = lazy(() =>
+  loadChunkWithRecovery(() =>
+    import("./pages/AgenciesPage/AgenciesPage").then((module) => ({
+      default: module.AgenciesPage,
+    })),
+  ),
+);
 const ClientFormModal = lazy(() =>
   loadChunkWithRecovery(() =>
     import("./components/ClientFormModal/ClientFormModal").then((module) => ({
@@ -151,6 +158,20 @@ function AppLayout() {
 
         <Routes>
           <Route path="/" element={<ClientListPage />} />
+          <Route
+            path="/agencias"
+            element={
+              <Suspense
+                fallback={
+                  <div className="container">
+                    <StatusMessage variant="loading" />
+                  </div>
+                }
+              >
+                <AgenciesPage />
+              </Suspense>
+            }
+          />
           <Route
             path="/clientes/:id"
             element={

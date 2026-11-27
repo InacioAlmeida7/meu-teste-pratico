@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Moon, Sun, UserPlus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Building2, Moon, Sun, UserPlus, Users } from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
 import logoBanestesBlue from "../../assets/logo-original-blue.png";
 import logoBanestesWhite from "../../assets/logo-original-white.png";
 import type { Theme } from "../../hooks/useTheme";
@@ -56,6 +56,23 @@ export function Header({ theme, onToggleTheme, onNewClient }: HeaderProps) {
             height="38"
           />
         </Link>
+
+        <nav className="site-header__nav" aria-label="Principal">
+          <ul className="site-header__nav-list">
+            <li>
+              <NavLink to="/" end className="site-header__nav-link">
+                <Users size={15} aria-hidden="true" />
+                <span>Clientes</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/agencias" className="site-header__nav-link">
+                <Building2 size={15} aria-hidden="true" />
+                <span>Agências</span>
+              </NavLink>
+            </li>
+          </ul>
+        </nav>
 
         <div className="site-header__actions">
           <div className="site-header__portal">

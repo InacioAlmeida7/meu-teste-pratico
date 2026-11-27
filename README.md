@@ -12,6 +12,7 @@ Aplicação React + TypeScript para consultar, filtrar, detalhar e cadastrar (em
 | --- | --- |
 | **Listagem** (`/`) | Busca por nome, nome social ou CPF/CNPJ (ignora acentos e pontuação) · filtros por tipo de documento, agência e uso de crédito alto (`credito=alto`) · destaque **"Crédito alto"** para uso $\ge 80\%$ · exportação CSV (`;` e UTF-8 BOM) de todos os resultados filtrados/ordenados · painel de inconsistências da base (`DataQualityNotice`) · ordenação por nome **A–Z** (padrão) ou **Z–A**, clicando em "Nome" (no celular, pelo campo "Ordenar por") · 10 clientes por página · filtros/ordenação/página sincronizados na URL (`q`, `agencia`, `doc`, `credito`, `ordem`, `pagina`) e preservados ao voltar do detalhe · volta à página 1 a cada busca, filtro, ordenação ou cadastro |
 | **Detalhe** (`/clientes/:id`) | Abas **Resumo**, **Contas Bancárias** e **Cadastro e Agência** · totais de saldo, crédito disponível e patrimônio · medidor acessível de uso consolidado de limite de crédito e nível de risco · botão **"Imprimir ficha"** (`@media print` consolidando dados, agência e contas) · contas em cards (1–3 lado a lado, 4 em grade 2×2) ou em lista quando há 5 ou mais · painel lateral com os dados de cada conta |
+| **Agências** (`/agencias`) | Visão gerencial (carregada sob demanda) com totais da rede, gráfico horizontal em CSS puro de saldo por agência, tabela ordenável por coluna e link direto para a listagem filtrada (`/?agencia=CODIGO`) |
 | **Novo cliente** | Modal com validação (React Hook Form + Zod) · CPF/CNPJ com dígito verificador e sem duplicidade · aviso no canto inferior direito com link **"Ver cliente"**, que some sozinho em 7 s (pausa com mouse ou foco) |
 | **Tema e Estados** | Tema claro por padrão com alternância para escuro no cabeçalho (`localStorage`, sem flash inicial e impressão clara) · carregamento, erro com "Tentar novamente" (sem perder os cadastros feitos) e lista vazia |
 
@@ -81,12 +82,12 @@ src/
 ├── App.tsx        # Layout, rotas e modal de cadastro (carregados sob demanda)
 ├── types/         # Interfaces Cliente, Conta e Agencia
 ├── services/      # Leitura e conversão das planilhas (bankApi.ts)
-├── utils/         # Normalização, formatação, validação de CPF/CNPJ, crédito, CSV e qualidade de dados
+├── utils/         # Normalização, formatação, validação de CPF/CNPJ, crédito, CSV, qualidade e indicadores por agência
 ├── schemas/       # Schema Zod do cadastro
 ├── context/       # Dados em memória (BankDataContext)
 ├── hooks/         # Filtros/paginação na URL, tema, popovers e fechamento de <dialog>
 ├── components/    # Header, lista, paginação, modal, calendário, cards...
-├── pages/         # ClientListPage e ClientDetailPage
+├── pages/         # ClientListPage, ClientDetailPage e AgenciesPage
 └── styles/        # Tokens e estilos globais
 ```
 

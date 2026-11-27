@@ -15,11 +15,54 @@
 
 .site-header__inner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-2) var(--space-4);
   min-block-size: var(--header-height);
   padding-block: var(--space-2);
+}
+
+.site-header__nav {
+  order: 3;
+  flex-basis: 100%;
+  padding-block-start: var(--space-2);
+  border-top: 1px solid var(--color-border-divider);
+}
+
+.site-header__nav-list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.site-header__nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.375rem;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  text-decoration: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.site-header__nav-link:hover {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-brand-primary);
+}
+
+.site-header__nav-link[aria-current="page"] {
+  border-color: var(--color-border-subtle);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-brand-primary);
 }
 
 .site-header__brand {
@@ -115,16 +158,34 @@
 }
 
 @media (min-width: 640px) {
+  .site-header__inner {
+    flex-wrap: nowrap;
+  }
+
   .site-header__logo {
     block-size: 2.375rem;
   }
 
-  .site-header__actions {
-    gap: var(--space-5);
+  .site-header__nav {
+    order: 0;
+    flex-basis: auto;
+    margin-inline-end: auto;
+    padding-block-start: 0;
+    border-top: 0;
   }
 
+  .site-header__actions {
+    gap: var(--space-4);
+  }
+}
+
+@media (min-width: 1024px) {
   .site-header__portal {
     display: flex;
+  }
+
+  .site-header__actions {
+    gap: var(--space-5);
   }
 }
 
@@ -132,6 +193,10 @@
   .site-header__theme-toggle {
     inline-size: 2.75rem;
     block-size: 2.75rem;
+  }
+
+  .site-header__nav-link {
+    min-block-size: 2.75rem;
   }
 }
 
